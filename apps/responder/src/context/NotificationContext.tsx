@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import * as Notifications from "expo-notifications";
+import { getNotifications } from "../lib/notifications";
 import { useCoreHook } from "./CoreContext";
 import { alertsAPI } from "../lib/api/alert";
 import {
@@ -47,6 +47,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // and play in-app feedback (native equivalent of the service-worker
   // PUSH_RECEIVED message in the PWA).
   useEffect(() => {
+    const Notifications = getNotifications();
+    if (!Notifications) return;
     const subscription = Notifications.addNotificationReceivedListener(
       (notification) => {
         const data = notification.request.content.data as

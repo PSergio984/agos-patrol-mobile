@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppState, Platform } from "react-native";
-import * as Notifications from "expo-notifications";
+import type * as NotificationsTypes from "expo-notifications";
 import Constants from "expo-constants";
+import { getNotifications } from "../lib/notifications";
 import apiClient from "../lib/api/client";
 import { useCoreHook } from "../context/CoreContext";
 
@@ -16,7 +17,9 @@ interface PushNotificationsState {
   recheck: () => void;
 }
 
-function mapStatus(status: Notifications.PermissionStatus): PushPermission {
+function mapStatus(
+  status: NotificationsTypes.PermissionStatus
+): PushPermission {
   switch (status) {
     case "granted":
       return "granted";
@@ -29,6 +32,8 @@ function mapStatus(status: Notifications.PermissionStatus): PushPermission {
 
 async function readPermission(): Promise<PushPermission> {
   try {
+    const Notifications = getNotifications();
+    if (!Notifications) return "unsupported";
     const { status } = await Notifications.getPermissionsAsync();
     return mapStatus(status);
   } catch {
@@ -49,6 +54,11 @@ export function usePushNotifications(): PushNotificationsState {
     setIsSubscribing(true);
     setError(null);
     try {
+      const Notifications = getNotifications();
+      if (!Notifications) {
+        setPermission("unsupported");
+        return;
+      }
       let current = await readPermission();
       if (current === "default") {
         const { status } = await Notifications.requestPermissionsAsync();

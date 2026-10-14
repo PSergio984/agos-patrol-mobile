@@ -79,7 +79,16 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     ws.onmessage = (e) => {
       try {
         const message: WebSocketMessage = JSON.parse(e.data);
-        if (__DEV__) console.log("Message received: ", message);
+        if (__DEV__) {
+          // Camera frames carry ~800KB of base64 — never log payloads raw.
+          const printable =
+            typeof message.data === "object" &&
+            message.data !== null &&
+            "image" in message.data
+              ? { ...message.data, image: "<frame omitted>" }
+              : message.data;
+          console.log("Message received: ", { ...message, data: printable });
+        }
         setLastMessageAt(new Date());
 
         const callbacks = listenersRef.current.get(message.type);

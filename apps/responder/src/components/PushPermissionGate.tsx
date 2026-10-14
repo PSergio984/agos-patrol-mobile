@@ -1,5 +1,6 @@
 import { Bell, BellOff, ShieldAlert } from "lucide-react-native";
 import { Linking, Modal, Platform, Pressable, Text, View } from "react-native";
+import { isExpoGo } from "../lib/notifications";
 import { useCoreHook } from "../context/CoreContext";
 import { useI18n } from "../context/I18nContext";
 import {
@@ -154,7 +155,10 @@ export default function PushPermissionGate() {
   const { permission, isSubscribed, isSubscribing, error, subscribe, recheck } =
     usePushNotifications();
 
+  // Remote push cannot work in Expo Go at all — gating would only block
+  // development smoke tests. Dev builds and production enforce normally.
   const needsGate =
+    !isExpoGo &&
     !!responderId &&
     !isSubscribed &&
     (permission !== "granted" || error !== null);
