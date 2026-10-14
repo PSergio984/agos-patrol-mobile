@@ -12,14 +12,14 @@ runs:
         cache: npm
         cache-dependency-path: apps/responder/package-lock.json
 
+    # --legacy-peer-deps: expo declares a peerOptional react-dom that npm
+    # would resolve to an incompatible version for RN. The committed lockfile
+    # was generated with this flag, so `npm ci` needs it too — plain `npm ci`
+    # strict-validates the peer tree and rejects the lockfile.
     - name: Install dependencies (lockfile)
       if: hashFiles('apps/responder/package-lock.json') != ''
       shell: bash
-      run: npm ci --prefix apps/responder
-
-    # --legacy-peer-deps: expo declares a peerOptional react-dom that npm
-    # would resolve to an incompatible version for RN. The committed lockfile
-    # already reflects a working resolution.
+      run: npm ci --prefix apps/responder --legacy-peer-deps
     - name: Install dependencies (no lockfile yet)
       if: hashFiles('apps/responder/package-lock.json') == ''
       shell: bash
