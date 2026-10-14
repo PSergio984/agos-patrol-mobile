@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Image, View } from "react-native";
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { Bell, Home, User } from "lucide-react-native";
 
 import { WebSocketProvider } from "../../src/context/WebsocketContext";
@@ -16,10 +16,10 @@ import {
 import { useI18n } from "../../src/context/I18nContext";
 import { useTheme } from "../../src/context/ThemeContext";
 import AppHeader from "../../src/components/AppHeader";
-import PushNotificationManager from "../../src/components/PushNotificationManager";
+import PushPermissionGate from "../../src/components/PushPermissionGate";
 
 function CoreGate({ children }: { children: ReactNode }) {
-  const { isLoading } = useCoreHook();
+  const { isLoading, hydrated, responderId } = useCoreHook();
 
   if (isLoading) {
     return (
@@ -33,6 +33,11 @@ function CoreGate({ children }: { children: ReactNode }) {
     );
   }
 
+  // AuthGuard parity — no stored session after hydration means re-verify
+  if (hydrated && !responderId) {
+    return <Redirect href="/(auth)/verify" />;
+  }
+
   return <>{children}</>;
 }
 
@@ -43,7 +48,7 @@ function ResponderTabs() {
 
   return (
     <>
-      <PushNotificationManager />
+      <PushPermissionGate />
       <Tabs
         screenOptions={{
           header: () => <AppHeader />,

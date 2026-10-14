@@ -59,11 +59,15 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isNavigationReady) return;
     void (async () => {
-      const [token, id] = await Promise.all([
-        getResponderToken(),
-        getResponderId(),
-      ]);
-      if (!token || !id) {
+      try {
+        const [token, id] = await Promise.all([
+          getResponderToken(),
+          getResponderId(),
+        ]);
+        if (!token || !id) {
+          router.replace("/(auth)/verify");
+        }
+      } catch {
         router.replace("/(auth)/verify");
       }
     })();

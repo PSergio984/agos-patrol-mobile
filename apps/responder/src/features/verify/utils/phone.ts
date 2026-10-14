@@ -71,6 +71,9 @@ export const formatPhoneInputDisplay = (digitsOnly: string): string => {
   return [first, second, third].filter(Boolean).join(" ");
 };
 
+// NOTE: unlike lib/utils/formatter's formatPHNumber (strict regex re-spacing of
+// an already-normalized "+63XXXXXXXXXX"), this strips non-digits first and
+// renders partial input — used live while typing and on normalized numbers.
 export const formatPHNumber = (input: string): string => {
   const digitsOnly = removeNonDigits(input);
 

@@ -1,5 +1,7 @@
 import { Text, View } from "react-native";
 import { useI18n, useWaterLevel } from "../../../hooks";
+import type { TranslationKey } from "../../../../../lib/i18n";
+import type { SensorData } from "../../../../../types/sensor";
 
 type StatCardProps = {
   title: string;
@@ -28,40 +30,46 @@ const StatCard = ({ title, data, desc }: StatCardProps) => {
   );
 };
 
+const LEVEL_METRIC: Record<
+  SensorData["alert"]["level"],
+  {
+    titleKey: TranslationKey;
+    field:
+      | "distance_to_warning_cm"
+      | "distance_to_critical_cm"
+      | "distance_from_critical_cm";
+    descKey: TranslationKey;
+  }
+> = {
+  normal: {
+    titleKey: "home.toWarning",
+    field: "distance_to_warning_cm",
+    descKey: "home.cmRemaining",
+  },
+  warning: {
+    titleKey: "home.toCritical",
+    field: "distance_to_critical_cm",
+    descKey: "home.cmRemaining",
+  },
+  critical: {
+    titleKey: "home.aboveCritical",
+    field: "distance_from_critical_cm",
+    descKey: "home.cmOver",
+  },
+};
+
 export default function MetricCards() {
   const { sensorData } = useWaterLevel();
   const { t } = useI18n();
 
-  const getTitleAndDesc = (): StatCardProps => {
-    switch (sensorData?.alert.level) {
-      case "normal":
-        return {
-          title: t("home.toWarning"),
-          data: (sensorData?.alert.distance_to_warning_cm ?? 0).toFixed(1),
-          desc: t("home.cmRemaining"),
-        };
-      case "warning":
-        return {
-          title: t("home.toCritical"),
-          data: (sensorData?.alert.distance_to_critical_cm ?? 0).toFixed(1),
-          desc: t("home.cmRemaining"),
-        };
-      case "critical":
-        return {
-          title: t("home.aboveCritical"),
-          data: (sensorData?.alert.distance_from_critical_cm ?? 0).toFixed(1),
-          desc: t("home.cmOver"),
-        };
-      default:
-        return {
-          title: t("home.toWarning"),
-          data: (sensorData?.alert.distance_to_warning_cm ?? 0).toFixed(1),
-          desc: t("home.cmRemaining"),
-        };
-    }
+  const level = sensorData?.alert.level;
+  // Missing/unrecognized level shows the same values as "normal"
+  const metric = (level && LEVEL_METRIC[level]) || LEVEL_METRIC.normal;
+  const titleAndDesc: StatCardProps = {
+    title: t(metric.titleKey),
+    data: (sensorData?.alert[metric.field] ?? 0).toFixed(1),
+    desc: t(metric.descKey),
   };
-
-  const titleAndDesc = getTitleAndDesc();
 
   const changeRateData = sensorData?.water_level.change_rate ?? 0;
   const changeRateDisplay =

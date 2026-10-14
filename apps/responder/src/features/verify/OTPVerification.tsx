@@ -13,7 +13,6 @@ import VerifyScreenLayout from "./components/VerifyScreenLayout";
 import InputOTPField from "./components/InputOTPField";
 import { formatPHNumber } from "./utils/phone";
 import { verifyAPI } from "../../lib/api/verify";
-import { setCachedToken } from "../../lib/api/client";
 import { setResponderId, setResponderToken } from "../../lib/storage";
 import { useVerify } from "./context/VerifyPageContext";
 import { useI18n } from "../../context/I18nContext";
@@ -63,10 +62,6 @@ export default function OTPVerification() {
         await setResponderId(responderDetails.responderId);
         if (res.responderToken) {
           await setResponderToken(res.responderToken);
-          // Contract: keep the axios interceptor cache warm
-          // (setResponderToken already does this — explicit call
-          // kept per the shared-module contract).
-          setCachedToken(res.responderToken);
         }
         router.replace("/(tabs)");
       } else {

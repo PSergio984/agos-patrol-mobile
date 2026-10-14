@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from "react";
-import type { ReactNode } from "react";
 import type { ResponderVerifyRequest } from "../../../types/verify";
 
 /**
@@ -33,11 +32,3 @@ export const useVerify = () => {
   const details = useSyncExternalStore(subscribe, () => responderDetails);
   return { responderDetails: details, setResponderDetails };
 };
-
-/**
- * Kept for drop-in parity with the PWA module surface. With the module store
- * it is a passthrough — state is shared whether or not a provider is mounted.
- */
-export function VerifyPageProvider({ children }: { children: ReactNode }) {
-  return <>{children}</>;
-}

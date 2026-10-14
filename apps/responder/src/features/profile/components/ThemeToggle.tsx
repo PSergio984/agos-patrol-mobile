@@ -6,7 +6,9 @@ import SectionLabel from "./common/SectionLabel";
 import { useTheme } from "../../../context/ThemeContext";
 import { useI18n } from "../../../context/I18nContext";
 
-type ThemeMode = "light" | "dark" | "system";
+// Derived from ThemeContext's (unexported) ThemeMode so the union stays
+// single-sourced.
+type ThemeMode = ReturnType<typeof useTheme>["mode"];
 
 type ThemeLabelKey = "profile.light" | "profile.dark" | "profile.system";
 

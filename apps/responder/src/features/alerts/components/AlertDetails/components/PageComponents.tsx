@@ -11,18 +11,14 @@ import type {
   AcknowledgeNotificationPayload,
   NotificationType,
 } from "../../../../../types/alert";
-import {
-  getBadgeColor,
-  getBadgeTextColor,
-  getIcon,
-} from "../../../utils/getClasses";
 import { formatDate } from "../../../../../lib/utils/formatter";
 import { useCoreHook } from "../../../../../context/CoreContext";
 import { useAlertsPageHook } from "../../../context/AlertsPageContext";
-import { alertsAPI } from "../../../../../lib/api/alerts";
+import { alertsAPI } from "../../../../../lib/api/alert";
 import { enqueueAcknowledgement } from "../../../utils/offlineQueue";
 import { useNotificationHook } from "../../../../../context/NotificationContext";
 import { useI18n } from "../../../../../context/I18nContext";
+import { AcknowledgeBadge, AlertTypeBadge } from "../../badges";
 
 export const Header = ({
   type,
@@ -35,11 +31,11 @@ export const Header = ({
 }) => {
   return (
     <View className="items-center gap-2.5">
-      <AlertTypeBadge type={type} />
+      <AlertTypeBadge type={type} variant="pill" />
       <Text className="font-semibold text-[1.120rem] text-center dark:text-white">
         {title}
       </Text>
-      <AcknowledgeBadge isAcknowledged={isAcknowledged} />
+      <AcknowledgeBadge isAcknowledged={isAcknowledged} variant="status" />
     </View>
   );
 };
@@ -168,53 +164,6 @@ export const AcknowledgementDetails = ({
           </Text>
         </View>
       ) : null}
-    </View>
-  );
-};
-
-export const AlertTypeBadge = ({ type }: { type: NotificationType }) => {
-  const { t } = useI18n();
-  const label =
-    type === "blockage" ? t("alerts.surfaceObstruction") : type.toUpperCase();
-
-  return (
-    <View
-      className={`${getBadgeColor(type)} border self-start px-4 py-1.5 flex-row items-center gap-1 rounded-full`}
-    >
-      {getIcon(type)}
-      <Text className={`text-xs font-medium ${getBadgeTextColor(type)}`}>
-        {label}
-      </Text>
-    </View>
-  );
-};
-
-export const AcknowledgeBadge = ({
-  isAcknowledged,
-}: {
-  isAcknowledged: boolean;
-}) => {
-  const { t } = useI18n();
-  const message = isAcknowledged
-    ? t("alerts.acknowledged").toUpperCase()
-    : t("alerts.pendingAcknowledgement");
-
-  return (
-    <View className="flex-row items-center gap-2">
-      {isAcknowledged ? (
-        <CircleCheck size={16} color="#16a34a" />
-      ) : (
-        <View className="w-3 h-3 rounded-full bg-yellow-500" />
-      )}
-      <Text
-        className={`text-[0.800rem] font-medium ${
-          isAcknowledged
-            ? "text-green-600 dark:text-green-400"
-            : "text-yellow-500 dark:text-yellow-400"
-        }`}
-      >
-        {message}
-      </Text>
     </View>
   );
 };

@@ -1,5 +1,10 @@
+import ErrorBoundary from "../../src/components/ErrorBoundary";
 import ProfileScreen from "../../src/features/profile/ProfileScreen";
 
 export default function Profile() {
-  return <ProfileScreen />;
+  return (
+    <ErrorBoundary>
+      <ProfileScreen />
+    </ErrorBoundary>
+  );
 }

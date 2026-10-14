@@ -1,5 +1,10 @@
+import ErrorBoundary from "../../src/components/ErrorBoundary";
 import Home from "../../src/features/home";
 
 export default function HomeScreen() {
-  return <Home />;
+  return (
+    <ErrorBoundary>
+      <Home />
+    </ErrorBoundary>
+  );
 }

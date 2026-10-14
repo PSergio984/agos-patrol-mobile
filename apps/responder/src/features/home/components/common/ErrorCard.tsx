@@ -1,7 +1,8 @@
 import { CircleAlert } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useI18n } from "../../hooks";
+import { cardShadow } from "../../../../styles/shadow";
 
 export default function ErrorCard({ message }: { message: string }) {
   const { t } = useI18n();
@@ -10,7 +11,7 @@ export default function ErrorCard({ message }: { message: string }) {
   return (
     <View
       className="rounded-xl p-3 flex-row gap-2.5 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800"
-      style={styles.shadow}
+      style={cardShadow}
     >
       <CircleAlert
         size={20}
@@ -28,13 +29,3 @@ export default function ErrorCard({ message }: { message: string }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  shadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-});

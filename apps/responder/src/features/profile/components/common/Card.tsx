@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { View } from "react-native";
+import { cardShadow } from "../../../../styles/shadow";
 
 type Props = {
   children: ReactNode;
@@ -18,14 +19,7 @@ export default function Card({ children, className }: Props) {
   return (
     <View
       className={`rounded-xl bg-white dark:bg-slate-800 dark:border dark:border-slate-700 ${className || ""}`}
-      style={{
-        // PWA .custom-shadow: 0 0 5px rgba(0,0,0,0.15)
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.15,
-        shadowRadius: 5,
-        elevation: 2,
-      }}
+      style={cardShadow}
     >
       {children}
     </View>

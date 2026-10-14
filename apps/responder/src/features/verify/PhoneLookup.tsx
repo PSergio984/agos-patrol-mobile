@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { isAxiosError } from "axios";
 import { router } from "expo-router";
@@ -25,6 +25,13 @@ export default function PhoneLookup() {
   const [error, setError] = useState<string | null>(null);
 
   const { setResponderDetails } = useVerify();
+
+  // Clear any stale responder details from a previous verify session —
+  // the PWA's VerifyPageProvider reset on unmount; this store persists
+  // for the app lifetime so it must be cleared on flow entry.
+  useEffect(() => {
+    setResponderDetails(null);
+  }, [setResponderDetails]);
   const { t } = useI18n();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";

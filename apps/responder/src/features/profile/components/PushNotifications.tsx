@@ -87,7 +87,7 @@ export default function PushNotifications() {
         setNotifPreferences(res);
       } catch (error) {
         setError(t("profile.prefError"));
-        console.log(error);
+        if (__DEV__) console.log(error);
       } finally {
         setIsFetching(false);
       }

@@ -9,12 +9,19 @@ export default function Index() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [token, id] = await Promise.all([
-        getResponderToken(),
-        getResponderId(),
-      ]);
-      if (!cancelled) {
-        setDestination(token && id ? "/(tabs)" : "/(auth)/verify");
+      try {
+        const [token, id] = await Promise.all([
+          getResponderToken(),
+          getResponderId(),
+        ]);
+        if (!cancelled) {
+          setDestination(token && id ? "/(tabs)" : "/(auth)/verify");
+        }
+      } catch {
+        // Storage read failure — fail closed to verify
+        if (!cancelled) {
+          setDestination("/(auth)/verify");
+        }
       }
     })();
     return () => {

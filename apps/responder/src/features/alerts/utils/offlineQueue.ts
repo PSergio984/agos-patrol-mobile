@@ -1,5 +1,5 @@
 import type { AcknowledgeNotificationPayload } from "../../../types/alert";
-import { alertsAPI } from "../../../lib/api/alerts";
+import { alertsAPI } from "../../../lib/api/alert";
 import { getStoredValue, setStoredValue } from "../../../lib/storage";
 
 const QUEUE_KEY = "offline-ack-queue";

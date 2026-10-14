@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Image, Text, View } from "react-native";
 import { useColorScheme } from "nativewind";
+import { cardShadow } from "../../../styles/shadow";
 
 interface ContainerProps {
   headerTitle: string;
@@ -25,10 +26,9 @@ export default function Container({
     <View
       className="rounded-xl overflow-hidden px-5 py-10 relative bg-white dark:bg-slate-800 dark:border dark:border-slate-700"
       style={{
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 0 },
+        ...cardShadow,
+        // Verify card overrides the shared shadow: stronger in dark mode
         shadowOpacity: colorScheme === "dark" ? 0.4 : 0.15,
-        shadowRadius: 5,
         elevation: 3,
       }}
     >

@@ -10,36 +10,32 @@ import {
 } from "../../../../../lib/utils/formatter";
 import { useWaterLevel } from "../../../hooks";
 
+const ALERT_CLASSES: Record<string, { circle: string; text: string }> = {
+  normal: {
+    circle: "#16a34a", // bg-green-600
+    text: "text-green-700 dark:text-green-400",
+  },
+  warning: {
+    circle: "#eab308", // bg-yellow-500
+    text: "text-yellow-600 dark:text-yellow-400",
+  },
+  critical: {
+    circle: "#dc2626", // bg-red-600
+    text: "text-red-700 dark:text-red-400",
+  },
+};
+
+// Any unrecognized/missing level (e.g. "unknown")
+const FALLBACK_ALERT_CLASSES = {
+  circle: "#4b5563", // bg-gray-600
+  text: "text-gray-700 dark:text-gray-300",
+};
+
 const AlertCategory = () => {
   const { sensorData } = useWaterLevel();
   const alert = sensorData?.alert?.level || "unknown";
 
-  const getAlertClasses = (alert: string) => {
-    switch (alert) {
-      case "normal":
-        return {
-          circle: "#16a34a", // bg-green-600
-          text: "text-green-700 dark:text-green-400",
-        };
-      case "warning":
-        return {
-          circle: "#eab308", // bg-yellow-500
-          text: "text-yellow-600 dark:text-yellow-400",
-        };
-      case "critical":
-        return {
-          circle: "#dc2626", // bg-red-600
-          text: "text-red-700 dark:text-red-400",
-        };
-      default:
-        return {
-          circle: "#4b5563", // bg-gray-600
-          text: "text-gray-700 dark:text-gray-300",
-        };
-    }
-  };
-
-  const classes = getAlertClasses(alert);
+  const classes = ALERT_CLASSES[alert] ?? FALLBACK_ALERT_CLASSES;
 
   return (
     <View className="flex-row self-start items-center gap-2">

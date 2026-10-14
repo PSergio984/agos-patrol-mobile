@@ -1,32 +1,10 @@
 import { Pressable, Text, View } from "react-native";
-import type { Alert, NotificationType } from "../../../types/alert";
-import {
-  getBadgeColor,
-  getBadgeTextColor,
-  getContainerBorderColor,
-  getIcon,
-} from "../utils/getClasses";
+import type { Alert } from "../../../types/alert";
+import { getContainerBorderColor } from "../utils/getClasses";
 import { formatTimestamp } from "../../../lib/utils/formatter";
 import { ChevronRight } from "lucide-react-native";
 import { useAlertsPageHook } from "../context/AlertsPageContext";
-import { useI18n } from "../../../context/I18nContext";
-
-const AlertTypeBadge = ({ type }: { type: NotificationType }) => {
-  const { t } = useI18n();
-  const label =
-    type === "blockage" ? t("alerts.surfaceObstruction") : type.toUpperCase();
-
-  return (
-    <View
-      className={`${getBadgeColor(type)} self-start px-2 py-1 flex-row items-center gap-1 rounded-md`}
-    >
-      {getIcon(type)}
-      <Text className={`text-xs font-medium ${getBadgeTextColor(type)}`}>
-        {label}
-      </Text>
-    </View>
-  );
-};
+import { AcknowledgeBadge, AlertTypeBadge } from "./badges";
 
 const TimeStamp = ({ timestamp }: { timestamp: string }) => {
   return (
@@ -43,26 +21,6 @@ const AlertBody = ({ title, message }: { title: string; message: string }) => {
       <Text className="text-sm text-gray-700 dark:text-gray-300">
         {message}
       </Text>
-    </View>
-  );
-};
-
-const AcknowledgeBadge = ({ isAcknowledged }: { isAcknowledged: boolean }) => {
-  const { t } = useI18n();
-  const message = isAcknowledged
-    ? t("alerts.acknowledged")
-    : t("alerts.unacknowledged");
-
-  const badgeColor = isAcknowledged
-    ? "bg-green-100 border-green-400 dark:bg-green-950/50 dark:border-green-700"
-    : "bg-amber-100 border-amber-400 dark:bg-amber-950/50 dark:border-amber-700";
-  const textColor = isAcknowledged
-    ? "text-green-700 dark:text-green-400"
-    : "text-amber-700 dark:text-amber-400";
-
-  return (
-    <View className={`rounded-lg border ${badgeColor} px-2`}>
-      <Text className={`text-[0.800rem] ${textColor}`}>{message}</Text>
     </View>
   );
 };

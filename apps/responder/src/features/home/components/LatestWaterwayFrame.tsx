@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Camera, ChevronRight } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import { useCoreHook, useI18n, useWebSocketMessage } from "../hooks";
+import { cardShadow } from "../../../styles/shadow";
 import {
   getLatestCameraFrame,
   type CameraFrameSnapshot,
@@ -58,7 +59,7 @@ export default function LatestWaterwayFrame() {
       <Pressable
         onPress={openLatestFrame}
         className="w-full flex-row items-center gap-3 rounded-xl bg-white px-3.5 py-3 active:bg-gray-50 dark:border dark:border-slate-700 dark:bg-slate-800 dark:active:bg-slate-700"
-        style={[styles.shadow, { minHeight: 66 }]}
+        style={[cardShadow, { minHeight: 66 }]}
         accessibilityRole="button"
         accessibilityLabel={t("home.frame.open")}
       >
@@ -96,14 +97,3 @@ export default function LatestWaterwayFrame() {
     </>
   );
 }
-
-// PWA `.custom-shadow`
-const styles = StyleSheet.create({
-  shadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-});

@@ -9,7 +9,7 @@ import {
 import type { ReactNode } from "react";
 import { AppState } from "react-native";
 import type { NotificationType, Alert } from "../../../types/alert";
-import { alertsAPI } from "../../../lib/api/alerts";
+import { alertsAPI } from "../../../lib/api/alert";
 import { flushQueue } from "../utils/offlineQueue";
 import { useCoreHook } from "../../../context/CoreContext";
 
@@ -184,7 +184,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
   // foreground (RN analogue of the PWA's window "online" listener).
   useEffect(() => {
     flushQueue().then((synced) => {
-      if (synced > 0) {
+      if (synced > 0 && __DEV__) {
         console.log(`Synced ${synced} queued acknowledgement(s)`);
       }
     });
@@ -192,7 +192,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         flushQueue().then((synced) => {
-          if (synced > 0) {
+          if (synced > 0 && __DEV__) {
             console.log(`Synced ${synced} queued acknowledgement(s)`);
           }
         });

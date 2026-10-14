@@ -21,6 +21,7 @@ interface CoreContextValue {
   responderId: string;
   responder: Responder | null;
   isLoading: boolean;
+  hydrated: boolean;
   logOut: () => void;
   setResponder: (responder: Responder) => void;
 }
@@ -29,6 +30,7 @@ const CoreContext = createContext<CoreContextValue | undefined>(undefined);
 
 export function CoreProvider({ children }: { children: ReactNode }) {
   const [responderId, setResponderId] = useState<string>("");
+  const [hydrated, setHydrated] = useState(false);
 
   const [responder, setResponder] = useState<Responder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,9 +38,19 @@ export function CoreProvider({ children }: { children: ReactNode }) {
   // SecureStore is async — hydrate the responder id once on mount
   useEffect(() => {
     let cancelled = false;
-    getResponderId().then((id) => {
-      if (!cancelled) setResponderId(id ?? "");
-    });
+    getResponderId()
+      .then((id) => {
+        if (cancelled) return;
+        setResponderId(id ?? "");
+        setHydrated(true);
+      })
+      .catch(() => {
+        // SecureStore read failure — treat as no session rather than
+        // leaving the app on the loading splash forever
+        if (cancelled) return;
+        setResponderId("");
+        setHydrated(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -68,22 +80,26 @@ export function CoreProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Wait for SecureStore hydration so isLoading stays true until the id is known
+    if (!hydrated) return;
+
     if (responderId) {
       fetchResponderDetails();
     } else {
       queueMicrotask(() => setIsLoading(false));
     }
-  }, [responderId, logOut]);
+  }, [hydrated, responderId, logOut]);
 
   const contextValue = useMemo(
     () => ({
       responderId,
       responder,
       isLoading,
+      hydrated,
       logOut,
       setResponder,
     }),
-    [responderId, responder, isLoading, logOut]
+    [responderId, responder, isLoading, hydrated, logOut]
   );
 
   return (
