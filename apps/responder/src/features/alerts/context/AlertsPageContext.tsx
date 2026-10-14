@@ -65,6 +65,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
   // switch must invalidate any response still in flight.
   const pageRef = useRef(1);
   const loadingMoreRef = useRef(false);
+  const replacingRef = useRef(false);
   const requestIdRef = useRef(0);
   const listGenRef = useRef(0);
 
@@ -78,7 +79,13 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
 
       // Replacing/refetching page 1 starts a new list generation — any
       // in-flight request from the previous generation must not write.
-      if (mode !== "append") listGenRef.current += 1;
+      if (mode !== "append") {
+        listGenRef.current += 1;
+        replacingRef.current = true;
+        // The outgoing list's append slot is dead — release it so a late
+        // finally can't clear the guard of a future append.
+        loadingMoreRef.current = false;
+      }
       const gen = listGenRef.current;
       const requestId = ++requestIdRef.current;
 
@@ -123,10 +130,14 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
           setError("Failed to fetch alerts. Please try again.");
         }
       } finally {
-        if (mode === "append") loadingMoreRef.current = false;
+        // Release the append slot only if this request still holds it —
+        // a stale append's finally must not unguard a newer append.
+        if (mode === "append" && requestId === requestIdRef.current)
+          loadingMoreRef.current = false;
         // Only the latest request clears the spinners — a superseded one
         // finishing must not hide the spinner of its replacement.
         if (gen === listGenRef.current) {
+          if (mode !== "append") replacingRef.current = false;
           setIsFetching(false);
           setIsRefreshing(false);
           setIsLoadingMore(false);
@@ -139,10 +150,8 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
   const handleFilterChange = useCallback(
     (filter: AlertTypeFilter) => {
       setChosenFilter(filter);
-      pageRef.current = 1;
       // Reset pagination surface so a stray onEndReached can't fire an
       // append for the outgoing filter while the new one loads.
-      loadingMoreRef.current = false;
       setIsLoadingMore(false);
       setHasMore(false);
       setAlerts(undefined);
@@ -152,15 +161,15 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
   );
 
   const loadMore = useCallback(() => {
-    if (loadingMoreRef.current || !hasMore) return;
-    // Synchronous guard — isLoadingMore state wouldn't flip until the next
-    // render, letting a double onEndReached append the same page twice.
+    // Synchronous guards — state wouldn't flip until the next render, and
+    // an append must never supersede an in-flight replace/refresh (it
+    // would drop the refresh response and duplicate rows on the old list).
+    if (loadingMoreRef.current || replacingRef.current || !hasMore) return;
     loadingMoreRef.current = true;
     fetchAlerts(pageRef.current + 1, chosenFilter, "append");
   }, [hasMore, chosenFilter, fetchAlerts]);
 
   const refresh = useCallback(() => {
-    pageRef.current = 1;
     fetchAlerts(1, chosenFilter, "refresh");
   }, [chosenFilter, fetchAlerts]);
 
