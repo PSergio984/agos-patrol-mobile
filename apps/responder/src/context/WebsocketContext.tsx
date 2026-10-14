@@ -35,6 +35,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     useState<ConnectionStatus>("disconnected");
   const [lastMessageAt, setLastMessageAt] = useState<Date | null>(null);
   const { responder } = useCoreHook();
+  // Only the location id feeds the socket URL — depending on it (instead of
+  // the whole responder object) keeps a profile save from tearing down the
+  // connection.
+  const locationId = responder?.locationId;
 
   // Track whether the component is mounted to prevent reconnect after unmount
   const mountedRef = useRef(true);
@@ -49,7 +53,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const listenersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
 
   const connect = useCallback(() => {
-    if (!responder || !mountedRef.current) return;
+    if (!locationId || !mountedRef.current) return;
 
     // Clean up existing connection — close silently without triggering reconnect
     if (socketRef.current) {
@@ -63,9 +67,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
     setConnectionStatus("connecting");
 
-    const ws = new WebSocket(
-      `${websocketUrl}/ws?location_id=${responder.locationId}`
-    );
+    const ws = new WebSocket(`${websocketUrl}/ws?location_id=${locationId}`);
     socketRef.current = ws;
 
     ws.onopen = () => {
@@ -110,11 +112,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     ws.onerror = (error) => {
       if (__DEV__) console.error("WebSocket error:", error);
     };
-  }, [responder]);
+  }, [locationId]);
 
   // Connect when responder is available
   useEffect(() => {
     mountedRef.current = true;
+    // Clear the flag the cleanup of a previous effect run set — otherwise the
+    // first onclose after any reconnect skips the backoff retry entirely.
+    intentionalCloseRef.current = false;
     connectRef.current = connect;
     connect();
 

@@ -104,14 +104,14 @@ const fil: Record<TranslationKey, string> = {
   "push.retryButton": "Subukan muli",
   "push.deniedTitle": "Naka-disable ang mga notipikasyon",
   "push.deniedBody":
-    "Tinanggihan mo dati ang mga notipikasyon. Hindi na ito itatanong muli ng browser — kailangan mong i-enable sa settings.",
+    "Tinanggihan mo dati ang mga notipikasyon. Hindi na ito itatanong muli ng app — kailangan mong i-enable sa settings ng device.",
   "push.iosSteps":
     "Sa iPhone: buksan ang Settings → Notifications → Patrol → i-on ang Allow Notifications.",
   "push.androidSteps":
-    "Tapikin ang lock o info icon sa address bar ng browser → Permissions → Notifications → Allow. Pagkatapos, balik dito at tapikin ang Recheck.",
+    "Buksan ang Settings → Apps → Patrol → Notifications → i-on ang Allow notifications. Pagkatapos, balik dito at tapikin ang Recheck.",
   "push.unsupportedTitle": "Hindi suportado ang device",
   "push.unsupportedBody":
-    "Hindi sinusuportahan ng device o browser na ito ang push notifications. Hindi makapagpapadala ng alerto ang Patrol dito.",
+    "Hindi sinusuportahan ng device na ito ang push notifications. Hindi makapagpapadala ng alerto ang Patrol dito.",
   "push.errorVapid":
     "Hindi ma-load ang notification settings. Subukan muli sa ilang sandali.",
   "push.errorSubscribe":

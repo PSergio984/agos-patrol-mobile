@@ -101,14 +101,14 @@ const en = {
   "push.retryButton": "Retry",
   "push.deniedTitle": "Notifications are disabled",
   "push.deniedBody":
-    "You previously denied notifications. Your browser will not ask again — you need to enable them in settings.",
+    "You previously denied notifications. The app will not ask again — you need to enable them in your device settings.",
   "push.iosSteps":
     "On iPhone: open Settings → Notifications → Patrol → turn on Allow Notifications.",
   "push.androidSteps":
-    "Tap the lock or info icon in your browser's address bar → Permissions → Notifications → Allow. Then return here and tap Recheck.",
+    "Open Settings → Apps → Patrol → Notifications → turn on Allow notifications. Then return here and tap Recheck.",
   "push.unsupportedTitle": "Device not supported",
   "push.unsupportedBody":
-    "This device or browser does not support push notifications. Patrol cannot deliver alerts here.",
+    "This device does not support push notifications. Patrol cannot deliver alerts here.",
   "push.errorVapid":
     "Could not load notification settings. Try again in a moment.",
   "push.errorSubscribe":

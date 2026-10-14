@@ -12,6 +12,9 @@ let cachedToken: string | null = null;
 
 export function setCachedToken(token: string | null) {
   cachedToken = token;
+  // A new token means a fresh auth session — re-arm the 401 redirect so a
+  // later expiry still routes back to /verify.
+  if (token) isRedirecting = false;
 }
 
 // Called once on a 401 while authenticated. The root layout registers a
