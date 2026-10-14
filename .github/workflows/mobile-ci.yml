@@ -1,0 +1,80 @@
+name: Mobile CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+    paths:
+      - 'apps/responder/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    branches:
+      - main
+      - 'feat/**'
+    paths:
+      - 'apps/responder/**'
+      - '.github/workflows/mobile-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-typecheck:
+    name: Lint and typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/responder/package-lock.json
+
+      - name: Install dependencies (lockfile)
+        if: hashFiles('apps/responder/package-lock.json') != ''
+        run: npm ci --prefix apps/responder
+
+      - name: Install dependencies (no lockfile yet)
+        if: hashFiles('apps/responder/package-lock.json') == ''
+        run: npm install --prefix apps/responder
+
+      - name: Typecheck
+        working-directory: apps/responder
+        run: npx tsc --noEmit
+
+      - name: Lint
+        working-directory: apps/responder
+        run: npx eslint .
+
+      - name: Format check
+        working-directory: apps/responder
+        run: npx prettier --check .
+
+  sonarcloud:
+    name: SonarCloud scan
+    runs-on: ubuntu-latest
+    needs: lint-typecheck
+    if: vars.SONARCLOUD_ENABLED == 'true'
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SonarCloud scan
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
