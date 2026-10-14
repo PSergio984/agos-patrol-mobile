@@ -8,6 +8,7 @@ on:
     paths:
       - 'apps/responder/**'
       - '.github/workflows/mobile-ci.yml'
+      - '.github/actions/setup-mobile/**'
   pull_request:
     branches:
       - main
@@ -15,6 +16,8 @@ on:
     paths:
       - 'apps/responder/**'
       - '.github/workflows/mobile-ci.yml'
+      - '.github/actions/setup-mobile/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -33,20 +36,8 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: apps/responder/package-lock.json
-
-      - name: Install dependencies (lockfile)
-        if: hashFiles('apps/responder/package-lock.json') != ''
-        run: npm ci --prefix apps/responder
-
-      - name: Install dependencies (no lockfile yet)
-        if: hashFiles('apps/responder/package-lock.json') == ''
-        run: npm install --prefix apps/responder
+      - name: Set up mobile environment
+        uses: ./.github/actions/setup-mobile
 
       - name: Typecheck
         working-directory: apps/responder
@@ -65,16 +56,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-typecheck
     if: vars.SONARCLOUD_ENABLED == 'true'
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: SonarCloud scan
-        uses: SonarSource/sonarqube-scan-action@v8
+        # sonarcloud-github-action is archived; the maintained replacement is
+        # sonarqube-scan-action (pinned to the v8.2.1 commit — same pin as
+        # the CEIT-Library workflows, auditable and supply-chain safe).
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}

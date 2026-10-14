@@ -1,0 +1,26 @@
+name: Setup mobile app environment
+
+description: Set up Node 22 and install apps/responder dependencies with caching.
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: apps/responder/package-lock.json
+
+    - name: Install dependencies (lockfile)
+      if: hashFiles('apps/responder/package-lock.json') != ''
+      shell: bash
+      run: npm ci --prefix apps/responder
+
+    # --legacy-peer-deps: expo declares a peerOptional react-dom that npm
+    # would resolve to an incompatible version for RN. The committed lockfile
+    # already reflects a working resolution.
+    - name: Install dependencies (no lockfile yet)
+      if: hashFiles('apps/responder/package-lock.json') == ''
+      shell: bash
+      run: npm install --prefix apps/responder --legacy-peer-deps
