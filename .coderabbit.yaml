@@ -1,0 +1,43 @@
+language: en
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches: [ "main" ]
+  path_instructions:
+    - path: "apps/responder/app/**"
+      instructions: |
+        expo-router file routes. Route files are thin shells delegating to
+        src/features/; _layout.tsx files define navigators only. Flag business
+        logic inside routes, navigation bypassing expo-router (Link/router/
+        useLocalSearchParams), and missing auth-guard behavior on (tabs).
+    - path: "apps/responder/src/lib/**"
+      instructions: |
+        API + storage layer. axios interceptors must keep snake_case⇄camelCase
+        conversion and token injection identical to the PWA contract. Flag
+        secrets in code, localStorage usage (must be expo-secure-store via
+        src/lib/storage), and fetch/axios calls outside src/lib/api.
+    - path: "apps/responder/src/context/**"
+      instructions: |
+        Providers ported 1:1 from the PWA. Flag WebSocket lifecycle bugs
+        (reconnect/backoff), SecureStore hydration races (isLoading must not
+        clear before hydration), unhandled promise rejections, and sync
+        setState inside effect bodies (react-hooks v7 errors).
+    - path: "apps/responder/src/features/**"
+      instructions: |
+        Feature screens ported from the responder PWA for v1 parity. Flag
+        behavior diverging from PWA semantics (acknowledge flow, pagination,
+        OTP/resend/devOtp, notif-preference toggles), web-only APIs with no
+        RN equivalent left unguarded, and new features beyond parity scope.
+    - path: "apps/responder/src/styles/**"
+      instructions: |
+        Shared style tokens (cardShadow etc.). Flag duplicated style literals
+        that should live here instead.
+    - path: ".github/workflows/**"
+      instructions: |
+        CI hardening: actions pinned (SHA preferred for third-party),
+        minimal permissions, timeouts, no secrets in YAML.
+chat:
+  auto_reply: true
