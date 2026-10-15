@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { WifiOff } from "lucide-react-native";
 import type { Alert } from "../../types/alert";
 import AlertCard from "./components/AlertCard";
 import AlertDetails from "./components/AlertDetails/AlertDetails";
@@ -27,6 +28,7 @@ export default function Alerts() {
     isLoadingMore,
     hasMore,
     error,
+    isOfflineCache,
     chosenFilter,
     loadMore,
     refresh,
@@ -49,6 +51,14 @@ export default function Alerts() {
 
   return (
     <View className="flex-1 bg-[#F8F8F8] dark:bg-slate-900">
+      {isOfflineCache && (
+        <View className="bg-amber-100 dark:bg-amber-950/50 border-b border-amber-300 dark:border-amber-700 px-4 py-2 flex-row items-center gap-2">
+          <WifiOff size={14} color="#b45309" />
+          <Text className="text-xs text-amber-800 dark:text-amber-300">
+            {t("alerts.offlineBanner")}
+          </Text>
+        </View>
+      )}
       <FlatList
         ref={listRef}
         data={shownAlerts ?? []}

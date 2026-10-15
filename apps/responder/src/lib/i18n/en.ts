@@ -52,6 +52,7 @@ const en = {
   "alerts.claimedByYou": "Claimed by you",
   "alerts.claimUnavailable": "Already claimed by another responder",
   "alerts.claimFailed": "Couldn't claim — check your connection",
+  "alerts.offlineBanner": "Offline — showing your last fetched alerts",
   "alerts.placeholder": "Enter optional acknowledgment message...",
   "alerts.notes": "NOTES",
   "alerts.all": "All",

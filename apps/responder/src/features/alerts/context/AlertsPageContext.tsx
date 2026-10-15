@@ -16,6 +16,7 @@ import type {
 } from "../../../types/alert";
 import { alertsAPI } from "../../../lib/api/alert";
 import { flushQueue } from "../utils/offlineQueue";
+import { cacheAlerts, readCachedAlerts } from "../utils/alertCache";
 import { useCoreHook } from "../../../context/CoreContext";
 import { useWebSocketMessage } from "../../../context/WebsocketContext";
 
@@ -23,6 +24,7 @@ interface AlertsPageContextValue {
   shownAlerts: Alert[] | undefined;
   chosenAlert: Alert | null;
   isFetching: boolean;
+  isOfflineCache: boolean;
   isRefreshing: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
@@ -63,6 +65,9 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string>("");
+  // True while the list is rendered from the on-disk snapshot — the fetch
+  // failed but the responder can still see what they last received.
+  const [isOfflineCache, setIsOfflineCache] = useState(false);
 
   const { responderId } = useCoreHook();
 
@@ -120,6 +125,10 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
           setAlerts((prev) => [...(prev || []), ...res.items]);
         } else {
           setAlerts(res.items);
+          // Replace the offline snapshot only on unfiltered fetches — a
+          // filtered page would leave the cold-open cache holding a subset.
+          if (filter === "all") cacheAlerts(res.items);
+          setIsOfflineCache(false);
         }
         // Page only advances on a successfully applied response — a failed
         // or superseded fetch must not leave gaps in pagination.
@@ -133,7 +142,20 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
       } catch {
         if (gen !== listGenRef.current) return;
         if (mode !== "append") {
-          setError("Failed to fetch alerts. Please try again.");
+          // Fall back to the on-disk snapshot before declaring failure —
+          // a responder without signal still sees what they last got.
+          const cached = await readCachedAlerts();
+          // The snapshot read itself may have been superseded — a newer
+          // request's outcome must not be overwritten by stale cache.
+          if (gen !== listGenRef.current) return;
+          if (cached && cached.items.length > 0) {
+            setAlerts(cached.items);
+            setIsOfflineCache(true);
+            setHasMore(false);
+            setError("");
+          } else {
+            setError("Failed to fetch alerts. Please try again.");
+          }
         }
       } finally {
         // Release the append slot only if this request still holds it —
@@ -307,6 +329,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
     () => ({
       shownAlerts: alerts,
       isFetching,
+      isOfflineCache,
       isRefreshing,
       isLoadingMore,
       hasMore,
@@ -324,6 +347,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
     [
       alerts,
       isFetching,
+      isOfflineCache,
       isRefreshing,
       isLoadingMore,
       hasMore,

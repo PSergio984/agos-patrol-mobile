@@ -31,7 +31,8 @@ Alarm pipeline and offline resilience are later phases (wayfinder map #1).
 
 ## Platform substitutions
 
-- `localStorage` → `expo-secure-store` (+ sync cache for axios interceptors)
+- `localStorage` → `expo-secure-store` (+ sync cache for axios interceptors);
+  payloads over SecureStore's ~2KB cap (alerts snapshot, #17) → AsyncStorage
 - Web push (`PushNotificationManager`, service worker) → `expo-notifications`
 - lucide-react → lucide-react-native; tailwind → NativeWind v4 (`dark:` kept)
 - `import.meta.env.VITE_*` → `process.env.EXPO_PUBLIC_*`; `import.meta.env.DEV` → `__DEV__`
@@ -40,5 +41,6 @@ Alarm pipeline and offline resilience are later phases (wayfinder map #1).
 ## Deliberately NOT in v1
 
 - InstallGate (browser-only concept)
-- Alarm/critical-alert pipeline, offline caching tiers — later wayfinder phases
+- Alarm/critical-alert pipeline — later wayfinder phases. Offline: ack outbox +
+  last-page-1 alerts read-cache (#17) shipped; deeper tiers still deferred
 - Citizen-facing features — separate future app/effort

@@ -54,6 +54,7 @@ const fil: Record<TranslationKey, string> = {
   "alerts.claimedByYou": "Kinuha mo",
   "alerts.claimUnavailable": "Kinuha na ng ibang responder",
   "alerts.claimFailed": "Hindi na-claim — tingnan ang koneksyon",
+  "alerts.offlineBanner": "Offline — ipinapakita ang huling mga alerto",
   "alerts.placeholder": "Maglagay ng opsyonal na mensahe...",
   "alerts.notes": "MGA TALA",
   "alerts.all": "Lahat",
