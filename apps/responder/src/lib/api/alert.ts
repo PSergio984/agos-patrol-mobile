@@ -2,10 +2,16 @@ import type {
   AcknowledgeNotificationPayload,
   AlertPaginatedResponse,
   AcknowledgeNotificationResponse,
+  ClaimResponse,
 } from "../../types/alert";
 import apiClient from "./client";
 
 export const alertsAPI = {
+  claimAlert: async (dispatchId: number): Promise<ClaimResponse> => {
+    const res = await apiClient.post("/responder/claim", { dispatchId });
+    return res.data;
+  },
+
   getUnreadAlertsCount: async (responderId: string): Promise<number> => {
     const res = await apiClient.get(
       `/responder/unread-alerts-count/${responderId}`

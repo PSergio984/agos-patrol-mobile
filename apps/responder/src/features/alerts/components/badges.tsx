@@ -1,8 +1,9 @@
 import { Text, View } from "react-native";
-import { CircleCheck } from "lucide-react-native";
+import { CircleCheck, UserCheck } from "lucide-react-native";
 import type { NotificationType } from "../../../types/alert";
 import { getBadgeColor, getBadgeTextColor, getIcon } from "../utils/getClasses";
 import { useI18n } from "../../../context/I18nContext";
+import { useCoreHook } from "../../../context/CoreContext";
 
 // Shared by AlertCard ("compact"/"badge" variants) and the AlertDetails sheet
 // ("pill"/"status" variants). The two call sites render the same data with
@@ -83,6 +84,49 @@ export const AcknowledgeBadge = ({
   return (
     <View className={`rounded-lg border ${badgeColor} px-2`}>
       <Text className={`text-[0.800rem] ${textColor}`}>{message}</Text>
+    </View>
+  );
+};
+
+// The claim lives on the shared dispatch — the badge renders who claimed it
+// for every responder holding a delivery of that alert. Renders nothing when
+// unclaimed (non-blockage alerts never carry claim fields). Own claims read
+// "Claimed by you" so my state is unambiguous.
+export const ClaimedBadge = ({
+  claimedBy,
+  claimedByName,
+  variant = "badge",
+}: {
+  claimedBy: string | null;
+  claimedByName: string | null;
+  variant?: "badge" | "status";
+}) => {
+  const { t } = useI18n();
+  const { responderId } = useCoreHook();
+
+  if (!claimedBy) return null;
+
+  const message =
+    claimedBy === responderId
+      ? t("alerts.claimedByYou")
+      : t("alerts.claimedBy").replace("{name}", claimedByName ?? "");
+
+  if (variant === "status") {
+    return (
+      <View className="flex-row items-center gap-2">
+        <UserCheck size={16} color="#2563eb" />
+        <Text className="text-[0.800rem] font-medium text-blue-600 dark:text-blue-400">
+          {message}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className="rounded-lg border bg-blue-100 border-blue-400 dark:bg-blue-950/50 dark:border-blue-700 px-2">
+      <Text className="text-[0.800rem] text-blue-700 dark:text-blue-400">
+        {message}
+      </Text>
     </View>
   );
 };

@@ -6,7 +6,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { CircleCheck } from "lucide-react-native";
+import { CircleCheck, UserCheck } from "lucide-react-native";
+import { isAxiosError } from "axios";
 import type {
   AcknowledgeNotificationPayload,
   NotificationType,
@@ -18,16 +19,20 @@ import { alertsAPI } from "../../../../../lib/api/alert";
 import { enqueueAcknowledgement } from "../../../utils/offlineQueue";
 import { useNotificationHook } from "../../../../../context/NotificationContext";
 import { useI18n } from "../../../../../context/I18nContext";
-import { AcknowledgeBadge, AlertTypeBadge } from "../../badges";
+import { AcknowledgeBadge, AlertTypeBadge, ClaimedBadge } from "../../badges";
 
 export const Header = ({
   type,
   title,
   isAcknowledged,
+  claimedBy,
+  claimedByName,
 }: {
   type: NotificationType;
   title: string;
   isAcknowledged: boolean;
+  claimedBy: string | null;
+  claimedByName: string | null;
 }) => {
   return (
     <View className="items-center gap-2.5">
@@ -35,7 +40,14 @@ export const Header = ({
       <Text className="font-semibold text-[1.120rem] text-center dark:text-white">
         {title}
       </Text>
-      <AcknowledgeBadge isAcknowledged={isAcknowledged} variant="status" />
+      <View className="flex-row items-center gap-3">
+        <AcknowledgeBadge isAcknowledged={isAcknowledged} variant="status" />
+        <ClaimedBadge
+          claimedBy={claimedBy}
+          claimedByName={claimedByName}
+          variant="status"
+        />
+      </View>
     </View>
   );
 };
@@ -127,6 +139,86 @@ export const AcknowledgeNotification = () => {
         {isSubmitting && <ActivityIndicator size="small" color="#ffffff" />}
         <Text className="text-white">{t("alerts.acknowledge")}</Text>
       </Pressable>
+    </View>
+  );
+};
+
+// "On it" — claims the shared dispatch for this blockage alert so other
+// responders stop dispatching themselves. A 409 (someone else claimed first)
+// surfaces inline; the follow-up WS event paints the real claimer.
+export const ClaimNotification = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+
+  const { chosenAlert, claimAlert } = useAlertsPageHook();
+  const { t } = useI18n();
+
+  const handleClaim = async () => {
+    if (isSubmitting || !chosenAlert) return;
+    try {
+      setIsSubmitting(true);
+      setClaimError(null);
+      await claimAlert(chosenAlert);
+    } catch (err) {
+      setClaimError(
+        isAxiosError(err) && err.response?.status === 409
+          ? t("alerts.claimUnavailable")
+          : t("alerts.claimFailed")
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <View className="gap-2">
+      <Pressable
+        onPress={() => handleClaim()}
+        disabled={isSubmitting}
+        className="bg-blue-600 rounded-lg py-3 flex-row items-center justify-center gap-2 disabled:opacity-50"
+      >
+        {isSubmitting && <ActivityIndicator size="small" color="#ffffff" />}
+        <Text className="text-white">{t("alerts.claim")}</Text>
+      </Pressable>
+      {claimError && (
+        <Text className="text-[0.800rem] text-red-600 dark:text-red-400 text-center">
+          {claimError}
+        </Text>
+      )}
+    </View>
+  );
+};
+
+export const ClaimedDetails = ({
+  claimedBy,
+  claimedByName,
+  claimedAt,
+}: {
+  claimedBy: string;
+  claimedByName: string | null;
+  claimedAt: string | null;
+}) => {
+  const { t } = useI18n();
+  const { responderId } = useCoreHook();
+
+  const message =
+    claimedBy === responderId
+      ? t("alerts.claimedByYou")
+      : t("alerts.claimedBy").replace("{name}", claimedByName ?? "");
+
+  return (
+    <View className="bg-blue-100 dark:bg-blue-950/50 border border-blue-500 dark:border-blue-700 p-2 rounded-lg flex-row gap-3 items-center">
+      <UserCheck size={24} color="#2563eb" />
+      <View>
+        <Text className="text-sm font-medium text-blue-700 dark:text-blue-400">
+          {message}
+        </Text>
+        {claimedAt ? (
+          <Text className="text-[0.800rem] text-blue-700 dark:text-blue-400">
+            {formatDate(claimedAt)}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 };

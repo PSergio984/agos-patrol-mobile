@@ -9,10 +9,15 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { AppState } from "react-native";
-import type { NotificationType, Alert } from "../../../types/alert";
+import type {
+  NotificationType,
+  Alert,
+  ClaimResponse,
+} from "../../../types/alert";
 import { alertsAPI } from "../../../lib/api/alert";
 import { flushQueue } from "../utils/offlineQueue";
 import { useCoreHook } from "../../../context/CoreContext";
+import { useWebSocketMessage } from "../../../context/WebsocketContext";
 
 interface AlertsPageContextValue {
   shownAlerts: Alert[] | undefined;
@@ -33,6 +38,7 @@ interface AlertsPageContextValue {
     message: string | null,
     acknowledgedAt: string
   ) => void;
+  claimAlert: (alert: Alert) => Promise<void>;
 }
 
 const AlertsPageContext = createContext<AlertsPageContextValue | undefined>(
@@ -214,6 +220,58 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  // Claim state applies to the shared dispatch — every responder's own
+  // delivery of that alert should reflect it, in the list and in the
+  // open detail sheet alike.
+  const markAlertClaimed = useCallback(
+    (dispatchId: number, claim: ClaimResponse) => {
+      const apply = (a: Alert): Alert =>
+        a.dispatchId === dispatchId
+          ? {
+              ...a,
+              claimedBy: claim.claimedBy,
+              claimedByName: claim.claimedByName,
+              claimedAt: claim.claimedAt,
+            }
+          : a;
+      setAlerts((prev) => prev?.map(apply));
+      setChosenAlert((prev) => (prev ? apply(prev) : prev));
+    },
+    []
+  );
+
+  // "On it" — claims the shared dispatch. Errors propagate so the caller
+  // can surface "already claimed" etc. A WS echo will also arrive, making
+  // the local mark idempotent.
+  const claimAlert = useCallback(
+    async (alert: Alert) => {
+      const claim = await alertsAPI.claimAlert(alert.dispatchId);
+      markAlertClaimed(claim.dispatchId, claim);
+    },
+    [markAlertClaimed]
+  );
+
+  // Another responder's claim lands here in near-real-time.
+  useWebSocketMessage(
+    "alert_claimed",
+    useCallback(
+      (data: {
+        dispatch_id: number;
+        claimed_by: string;
+        claimed_by_name: string;
+        claimed_at: string;
+      }) => {
+        markAlertClaimed(data.dispatch_id, {
+          dispatchId: data.dispatch_id,
+          claimedBy: data.claimed_by,
+          claimedByName: data.claimed_by_name,
+          claimedAt: data.claimed_at,
+        });
+      },
+      [markAlertClaimed]
+    )
+  );
+
   // Initial fetch once the responder identity is available.
   // Deferred a tick so fetchAlerts' synchronous setIsFetching doesn't run
   // inside the effect body (cascading-render lint).
@@ -261,6 +319,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
       loadMore,
       refresh,
       acknowledgeAlert,
+      claimAlert,
     }),
     [
       alerts,
@@ -277,6 +336,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
       loadMore,
       refresh,
       acknowledgeAlert,
+      claimAlert,
     ]
   );
 
