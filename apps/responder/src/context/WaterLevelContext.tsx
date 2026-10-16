@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useWebSocketMessage } from "./WebsocketContext";
 import { useCoreHook } from "./CoreContext";
+import { useResetOnSiteChange } from "../hooks/useResetOnSiteChange";
 import { sensorAPI } from "../lib/api/sensor";
 import type {
   SensorConfig,
@@ -40,31 +41,46 @@ export function WaterLevelProvider({ children }: { children: ReactNode }) {
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { responder } = useCoreHook();
+  const { effectiveLocationId } = useCoreHook();
 
-  // Fetch config data when responder is loaded
+  // Drop the previous site's reading/config on a site switch — the new site's
+  // data arrives via the WS initial payload.
+  useResetOnSiteChange(() => {
+    setSensorData(null);
+    setSensorConfig(null);
+    setWarning(null);
+    setError(null);
+    setIsFetching(true);
+  });
+
+  // Fetch config data for the effective site (presence ?? home)
   useEffect(() => {
-    if (!responder?.locationId) {
+    if (!effectiveLocationId) {
       queueMicrotask(() => setIsFetchingConfig(false));
       return;
     }
 
+    // Guard against a stale fetch from the previous site overwriting the new
+    // site's config after a switch.
+    let cancelled = false;
     const fetchSensorConfig = async () => {
       try {
         setIsFetchingConfig(true);
-        const config = await sensorAPI.getSensorDeviceConfig(
-          responder.locationId
-        );
-        setSensorConfig(config);
+        const config =
+          await sensorAPI.getSensorDeviceConfig(effectiveLocationId);
+        if (!cancelled) setSensorConfig(config);
       } catch (error) {
         console.error(error);
-        setError("Failed to fetch sensor configuration");
+        if (!cancelled) setError("Failed to fetch sensor configuration");
       } finally {
-        setIsFetchingConfig(false);
+        if (!cancelled) setIsFetchingConfig(false);
       }
     };
     fetchSensorConfig();
-  }, [responder]);
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveLocationId]);
 
   // WebSocket message handler for sensor updates
   useWebSocketMessage("sensor_update", (data: SensorReadingSummaryResponse) => {

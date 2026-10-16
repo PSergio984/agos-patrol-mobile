@@ -10,6 +10,7 @@ import type {
   WeatherData,
 } from "../types/weather";
 import { useWebSocketMessage } from "./WebsocketContext";
+import { useResetOnSiteChange } from "../hooks/useResetOnSiteChange";
 import { getWeatherColor, getWeatherIcon } from "../lib/utils/weather";
 
 interface WeatherContextValue {
@@ -30,6 +31,15 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
 
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Weather is site-scoped — reset on site switch; the new site's snapshot
+  // arrives via the WS initial payload.
+  useResetOnSiteChange(() => {
+    setWeatherData(null);
+    setWarning(null);
+    setError(null);
+    setIsFetching(true);
+  });
 
   useWebSocketMessage(
     "weather_update",

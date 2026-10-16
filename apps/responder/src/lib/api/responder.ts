@@ -24,6 +24,15 @@ export const responderAPI = {
     }
   },
 
+  // Presence: mark which eligible site (home or open deployment) the
+  // responder is on. Server validates membership; 400 if ineligible.
+  setActiveSite: async (
+    locationId: number
+  ): Promise<{ locationId: number; activeLocationId: number | null }> => {
+    const res = await apiClient.post("/responder/active-site", { locationId });
+    return res.data;
+  },
+
   updateResponderProfile: async (
     responderId: string,
     payload: { firstName?: string; lastName?: string }

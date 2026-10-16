@@ -10,6 +10,7 @@ import {
 import type { ReactNode } from "react";
 import { AppState } from "react-native";
 import { useCoreHook } from "./CoreContext";
+import { getCachedToken } from "../lib/api/client";
 
 const websocketUrl = process.env.EXPO_PUBLIC_WS_URL;
 
@@ -34,11 +35,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("disconnected");
   const [lastMessageAt, setLastMessageAt] = useState<Date | null>(null);
-  const { responder } = useCoreHook();
-  // Only the location id feeds the socket URL — depending on it (instead of
-  // the whole responder object) keeps a profile save from tearing down the
-  // connection.
-  const locationId = responder?.locationId;
+  const { effectiveLocationId } = useCoreHook();
 
   // Track whether the component is mounted to prevent reconnect after unmount
   const mountedRef = useRef(true);
@@ -53,7 +50,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const listenersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
 
   const connect = useCallback(() => {
-    if (!locationId || !mountedRef.current) return;
+    const token = getCachedToken();
+    if (!effectiveLocationId || !token || !mountedRef.current) return;
 
     // Clean up existing connection — close silently without triggering reconnect
     if (socketRef.current) {
@@ -67,7 +65,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
     setConnectionStatus("connecting");
 
-    const ws = new WebSocket(`${websocketUrl}/ws?location_id=${locationId}`);
+    // The token pins the channel to the responder's effective site — the
+    // server resolves active_location_id ?? location_id at connect time, so
+    // a site switch only needs this callback to re-run (dep below), and a
+    // stale client-side site can never subscribe to the wrong channel.
+    const ws = new WebSocket(
+      `${websocketUrl}/ws?token=${encodeURIComponent(token)}`
+    );
     socketRef.current = ws;
 
     ws.onopen = () => {
@@ -121,7 +125,9 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     ws.onerror = (error) => {
       if (__DEV__) console.error("WebSocket error:", error);
     };
-  }, [locationId]);
+    // effectiveLocationId is a deliberate dep: switching sites re-runs
+    // connect() so the server re-derives the channel from the new presence.
+  }, [effectiveLocationId]);
 
   // Connect when responder is available
   useEffect(() => {

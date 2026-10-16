@@ -17,6 +17,12 @@ export function setCachedToken(token: string | null) {
   if (token) isRedirecting = false;
 }
 
+// Read-side of the sync mirror — the WebSocket layer needs the token for its
+// own handshake outside the axios pipeline.
+export function getCachedToken(): string | null {
+  return cachedToken;
+}
+
 // Called once on a 401 while authenticated. The root layout registers a
 // handler that clears the responder session and routes to /verify — kept as
 // a callback so this module stays free of expo-router/storage imports.

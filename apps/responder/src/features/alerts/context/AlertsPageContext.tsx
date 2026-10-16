@@ -69,7 +69,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
   // failed but the responder can still see what they last received.
   const [isOfflineCache, setIsOfflineCache] = useState(false);
 
-  const { responderId } = useCoreHook();
+  const { responderId, effectiveLocationId } = useCoreHook();
 
   // Pagination and request-staleness tracked in refs — FlatList's
   // onEndReached can fire twice inside one render cycle, and a filter
@@ -127,7 +127,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
           setAlerts(res.items);
           // Replace the offline snapshot only on unfiltered fetches — a
           // filtered page would leave the cold-open cache holding a subset.
-          if (filter === "all") cacheAlerts(res.items);
+          if (filter === "all") cacheAlerts(effectiveLocationId, res.items);
           setIsOfflineCache(false);
         }
         // Page only advances on a successfully applied response — a failed
@@ -144,7 +144,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
         if (mode !== "append") {
           // Fall back to the on-disk snapshot before declaring failure —
           // a responder without signal still sees what they last got.
-          const cached = await readCachedAlerts();
+          const cached = await readCachedAlerts(effectiveLocationId);
           // The snapshot read itself may have been superseded — a newer
           // request's outcome must not be overwritten by stale cache.
           if (gen !== listGenRef.current) return;
@@ -172,7 +172,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [responderId]
+    [responderId, effectiveLocationId]
   );
 
   const handleFilterChange = useCallback(
@@ -294,14 +294,28 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
     )
   );
 
-  // Initial fetch once the responder identity is available.
+  // Initial fetch once the responder identity is available, and a
+  // reset-and-refetch whenever the effective site changes — the old site's
+  // list, open detail, and offline-cache flag all belong to the old site.
   // Deferred a tick so fetchAlerts' synchronous setIsFetching doesn't run
   // inside the effect body (cascading-render lint).
+  const prevSiteRef = useRef(effectiveLocationId);
   useEffect(() => {
     if (!responderId) return;
-    const id = setTimeout(() => fetchAlerts(1, "all"), 0);
+    const siteChanged = prevSiteRef.current !== effectiveLocationId;
+    prevSiteRef.current = effectiveLocationId;
+    const id = setTimeout(() => {
+      if (siteChanged) {
+        setChosenAlert(null);
+        setIsOfflineCache(false);
+        setAlerts(undefined);
+        setHasMore(false);
+        setChosenFilter("all");
+      }
+      fetchAlerts(1, "all");
+    }, 0);
     return () => clearTimeout(id);
-  }, [responderId, fetchAlerts]);
+  }, [responderId, effectiveLocationId, fetchAlerts]);
 
   // Flush queued offline acknowledgements when the app returns to the
   // foreground (RN analogue of the PWA's window "online" listener).

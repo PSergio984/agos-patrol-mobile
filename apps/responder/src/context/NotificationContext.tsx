@@ -26,13 +26,17 @@ const NotificationContext = createContext<NotificationContextValue | undefined>(
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const { responderId } = useCoreHook();
+  const { responderId, effectiveLocationId } = useCoreHook();
 
+  // Unread count is scoped server-side to the responder's effective site —
+  // refetch when presence changes, and drop results that resolve after a
+  // switch so site A's count can't overwrite site B's.
   useEffect(() => {
+    let cancelled = false;
     const fetchUnreadCount = async () => {
       try {
         const res = await alertsAPI.getUnreadAlertsCount(responderId);
-        setUnreadCount(res);
+        if (!cancelled) setUnreadCount(res);
       } catch (error) {
         console.error("Failed to fetch unread alerts count:", error);
       }
@@ -41,7 +45,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (responderId) {
       fetchUnreadCount();
     }
-  }, [responderId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [responderId, effectiveLocationId]);
 
   // Listen for push notifications received while the app is foregrounded
   // and play in-app feedback (native equivalent of the service-worker

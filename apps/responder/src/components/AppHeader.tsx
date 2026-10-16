@@ -1,7 +1,12 @@
-import { Image, Text, View } from "react-native";
+import { useState } from "react";
+import { Image, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ChevronDown } from "lucide-react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useCoreHook } from "../context/CoreContext";
+import { useI18n } from "../context/I18nContext";
+import { isMultiSite } from "../lib/utils/sites";
+import SitePickerModal from "./SitePickerModal";
 
 const MapPinFilled = ({ color }: { color: string }) => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -14,8 +19,12 @@ const MapPinFilled = ({ color }: { color: string }) => (
 );
 
 export default function AppHeader() {
-  const { responder } = useCoreHook();
+  const { responder, effectiveLocationName } = useCoreHook();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const canSwitchSite = isMultiSite(responder);
 
   return (
     <View
@@ -41,12 +50,23 @@ export default function AppHeader() {
           Patrol
         </Text>
       </View>
-      <View className="flex-row items-center gap-1">
+      <Pressable
+        className="flex-row items-center gap-1"
+        onPress={canSwitchSite ? () => setPickerOpen(true) : undefined}
+        accessibilityRole={canSwitchSite ? "button" : undefined}
+        accessibilityLabel={canSwitchSite ? t("site.change") : undefined}
+        disabled={!canSwitchSite}
+      >
         <MapPinFilled color="#ef4444" />
         <Text className="font-poppins-semibold mt-1 dark:text-white">
-          {responder?.locationName}
+          {effectiveLocationName}
         </Text>
-      </View>
+        {canSwitchSite && <ChevronDown size={14} color="#9ca3af" />}
+      </Pressable>
+      <SitePickerModal
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+      />
     </View>
   );
 }

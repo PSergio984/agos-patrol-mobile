@@ -15,30 +15,42 @@ import CardTitle from "./common/CardTitle";
 import Skeleton from "./common/Skeleton";
 
 export default function WaterLevelSparkline() {
-  const { responder } = useCoreHook();
+  const { effectiveLocationId } = useCoreHook();
   const [data, setData] = useState<WaterLevelTrendPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useI18n();
 
   useEffect(() => {
-    if (!responder?.locationId) return;
+    if (!effectiveLocationId) return;
 
+    // Skip results that resolve after the site changed — a stale site-A trend
+    // must never render under site B.
+    let cancelled = false;
     const fetchTrend = async () => {
       try {
-        const res = await sensorAPI.getWaterLevelTrend(responder.locationId);
-        setData(res);
+        const res = await sensorAPI.getWaterLevelTrend(effectiveLocationId);
+        if (!cancelled) setData(res);
       } catch {
         // Silently fail — sparkline is supplementary
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
+    // Drop the previous site's trend immediately — deferred a tick because a
+    // synchronous setState inside the effect body trips the render lint.
+    queueMicrotask(() => {
+      setData([]);
+      setIsLoading(true);
+    });
     fetchTrend();
     // Refresh every 5 minutes
     const interval = setInterval(fetchTrend, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [responder?.locationId]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [effectiveLocationId]);
 
   if (isLoading) {
     return (

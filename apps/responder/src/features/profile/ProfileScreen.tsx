@@ -4,6 +4,7 @@ import LanguageToggle from "./components/LanguageToggle";
 import Logout from "./components/Logout";
 import MainDetails from "./components/MainDetails";
 import PushNotifications from "./components/PushNotifications";
+import SiteSection from "./components/SiteSection";
 import ThemeToggle from "./components/ThemeToggle";
 
 /**
@@ -19,6 +20,7 @@ export default function ProfileScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <MainDetails />
+      <SiteSection />
       <PushNotifications />
       <LanguageToggle />
       <ThemeToggle />

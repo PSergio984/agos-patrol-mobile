@@ -8,8 +8,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const mockWsCallbacks: Record<string, (data: unknown) => void> = {};
 
+// Mutable so a test can simulate a site switch by flipping
+// effectiveLocationId and re-rendering.
+const mockCore = {
+  responderId: "r1",
+  responder: { locationId: 1, activeLocationId: null as number | null },
+  effectiveLocationId: 1 as number | null,
+};
+
 jest.mock("../../../context/CoreContext", () => ({
-  useCoreHook: () => ({ responderId: "r1", responder: { locationId: 1 } }),
+  useCoreHook: () => mockCore,
 }));
 
 jest.mock("../../../context/WebsocketContext", () => ({
@@ -67,6 +75,7 @@ const settle = () =>
 beforeEach(async () => {
   jest.clearAllMocks();
   await AsyncStorage.clear();
+  mockCore.effectiveLocationId = 1;
   mockGetAlerts.mockResolvedValue({
     items: [BLOCKAGE_ALERT],
     hasMore: false,
@@ -182,6 +191,59 @@ describe("offline read-cache", () => {
     expect(result.current.error).toBe(
       "Failed to fetch alerts. Please try again."
     );
+    expect(result.current.isOfflineCache).toBe(false);
+    expect(result.current.shownAlerts ?? []).toHaveLength(0);
+  });
+});
+
+describe("site switch", () => {
+  it("resets the list and refetches when the effective site changes", async () => {
+    const { result, rerender } = await renderHook(() => useAlertsPageHook(), {
+      wrapper,
+    });
+    await settle();
+    expect(result.current.shownAlerts).toHaveLength(1);
+    expect(mockGetAlerts).toHaveBeenCalledTimes(1);
+
+    mockCore.effectiveLocationId = 2;
+    await act(async () => {
+      rerender({});
+    });
+    await settle();
+
+    expect(mockGetAlerts).toHaveBeenCalledTimes(2);
+    expect(result.current.shownAlerts).toHaveLength(1);
+  });
+
+  it("does not refetch on unrelated rerenders", async () => {
+    const { rerender } = await renderHook(() => useAlertsPageHook(), {
+      wrapper,
+    });
+    await settle();
+
+    await act(async () => {
+      rerender({});
+    });
+    await settle();
+
+    expect(mockGetAlerts).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not serve the previous site's cache after switching", async () => {
+    // Seed site 1's snapshot via a successful fetch, then go offline.
+    const { result, rerender } = await renderHook(() => useAlertsPageHook(), {
+      wrapper,
+    });
+    await settle();
+    expect(result.current.shownAlerts).toHaveLength(1);
+
+    mockGetAlerts.mockRejectedValue(new Error("network down"));
+    mockCore.effectiveLocationId = 2;
+    await act(async () => {
+      rerender({});
+    });
+    await settle();
+
     expect(result.current.isOfflineCache).toBe(false);
     expect(result.current.shownAlerts ?? []).toHaveLength(0);
   });
