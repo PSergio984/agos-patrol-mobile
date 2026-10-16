@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, ChevronRight } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import { Pressable, Text, View } from "react-native";
@@ -30,6 +30,13 @@ export default function LatestWaterwayFrame() {
 
   const locationId = effectiveLocationId;
 
+  // Track the live site in a ref so a frame fetch started for the previous
+  // site can detect the switch when it resolves.
+  const locationIdRef = useRef(locationId);
+  useEffect(() => {
+    locationIdRef.current = locationId;
+  }, [locationId]);
+
   // Frames are per-site — a cached site-A frame must not show under site B.
   useResetOnSiteChange(() => {
     setLatestFrame(null);
@@ -53,8 +60,11 @@ export default function LatestWaterwayFrame() {
       return;
     }
 
-    getLatestCameraFrame(locationId)
-      .then((frame) => setLatestFrame(frame))
+    const requestedSite = locationId;
+    getLatestCameraFrame(requestedSite)
+      .then((frame) => {
+        if (locationIdRef.current === requestedSite) setLatestFrame(frame);
+      })
       .catch(() => {
         if (!latestFrame) setHasError(true);
       })

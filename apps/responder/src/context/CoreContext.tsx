@@ -9,7 +9,11 @@ import {
 } from "react";
 import type { Responder } from "../types/responder";
 import { responderAPI } from "../lib/api/responder";
-import { getEffectiveSiteId, getEffectiveSiteName } from "../lib/utils/sites";
+import {
+  getEffectiveSiteId,
+  getEffectiveSiteName,
+  getEligibleSites,
+} from "../lib/utils/sites";
 import { router } from "expo-router";
 import { isAxiosError } from "axios";
 import {
@@ -97,12 +101,31 @@ export function CoreProvider({ children }: { children: ReactNode }) {
   }, [hydrated, responderId, logOut]);
 
   // Write presence, then refetch details — the server is the source of truth
-  // for the resolved site name and any concurrent membership changes.
+  // for the resolved site name and any concurrent membership changes. If the
+  // refetch fails after the POST landed, still apply the confirmed presence
+  // locally — otherwise the UI sits on the old site while the server (alerts,
+  // unread count, next WS connect) already serves the new one.
   const setActiveSite = useCallback(
     async (locationId: number) => {
       if (!responderId) throw new Error("No responder session");
-      await responderAPI.setActiveSite(locationId);
-      setResponder(await responderAPI.getResponderDetails(responderId));
+      const res = await responderAPI.setActiveSite(locationId);
+      try {
+        setResponder(await responderAPI.getResponderDetails(responderId));
+      } catch {
+        setResponder((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            activeLocationId: res.activeLocationId,
+            activeLocationName:
+              res.activeLocationId == null
+                ? null
+                : (getEligibleSites(prev).find(
+                    (s) => s.locationId === res.activeLocationId
+                  )?.locationName ?? null),
+          };
+        });
+      }
     },
     [responderId]
   );

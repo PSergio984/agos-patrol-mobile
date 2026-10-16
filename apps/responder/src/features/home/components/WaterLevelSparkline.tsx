@@ -23,14 +23,17 @@ export default function WaterLevelSparkline() {
   useEffect(() => {
     if (!effectiveLocationId) return;
 
+    // Skip results that resolve after the site changed — a stale site-A trend
+    // must never render under site B.
+    let cancelled = false;
     const fetchTrend = async () => {
       try {
         const res = await sensorAPI.getWaterLevelTrend(effectiveLocationId);
-        setData(res);
+        if (!cancelled) setData(res);
       } catch {
         // Silently fail — sparkline is supplementary
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
@@ -43,7 +46,10 @@ export default function WaterLevelSparkline() {
     fetchTrend();
     // Refresh every 5 minutes
     const interval = setInterval(fetchTrend, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [effectiveLocationId]);
 
   if (isLoading) {

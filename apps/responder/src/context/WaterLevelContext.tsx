@@ -60,20 +60,26 @@ export function WaterLevelProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Guard against a stale fetch from the previous site overwriting the new
+    // site's config after a switch.
+    let cancelled = false;
     const fetchSensorConfig = async () => {
       try {
         setIsFetchingConfig(true);
         const config =
           await sensorAPI.getSensorDeviceConfig(effectiveLocationId);
-        setSensorConfig(config);
+        if (!cancelled) setSensorConfig(config);
       } catch (error) {
         console.error(error);
-        setError("Failed to fetch sensor configuration");
+        if (!cancelled) setError("Failed to fetch sensor configuration");
       } finally {
-        setIsFetchingConfig(false);
+        if (!cancelled) setIsFetchingConfig(false);
       }
     };
     fetchSensorConfig();
+    return () => {
+      cancelled = true;
+    };
   }, [effectiveLocationId]);
 
   // WebSocket message handler for sensor updates
