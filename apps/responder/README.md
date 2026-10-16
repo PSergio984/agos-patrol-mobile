@@ -13,7 +13,7 @@ npx expo start
 ## Environment (.env)
 
 - `EXPO_PUBLIC_API_BASE_URL` — backend base URL; requests go to `<base>/api/v1`
-- `EXPO_PUBLIC_WS_URL` — WebSocket base URL; connects at `<ws>/ws?location_id=<id>`
+- `EXPO_PUBLIC_WS_URL` — WebSocket base URL; connects at `<ws>/ws?token=<responder-token>` (server derives the site channel from the responder's effective site)
 
 ## Structure
 

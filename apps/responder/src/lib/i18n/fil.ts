@@ -97,6 +97,16 @@ const fil: Record<TranslationKey, string> = {
   "profile.updateFailed": "Hindi nagawa. Pakisubukan muli.",
   "profile.nameRequired": "Kinakailangan ang pangalan at apelyido.",
 
+  // Site picker (presence — which of my sites am I on)
+  "site.section": "LOKASYON",
+  "site.current": "Kasalukuyang lokasyon",
+  "site.change": "Palitan ang lokasyon",
+  "site.pickerTitle": "Nasaang lokasyon ka ngayon?",
+  "site.home": "Pangunahing lokasyon",
+  "site.deployment": "Naka-deploy",
+  "site.switching": "Lilipat...",
+  "site.switchFailed": "Hindi nagawa ang paglipat. Subukan muli.",
+
   // Push permission gate
   "push.title": "Kailangan ang Mga Notipikasyon",
   "push.subtitle":

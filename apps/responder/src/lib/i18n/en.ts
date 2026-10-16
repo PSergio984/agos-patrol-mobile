@@ -94,6 +94,16 @@ const en = {
   "profile.updateFailed": "Failed to update. Please try again.",
   "profile.nameRequired": "First and last name are required.",
 
+  // Site picker (presence — which of my sites am I on)
+  "site.section": "SITE",
+  "site.current": "Current site",
+  "site.change": "Change site",
+  "site.pickerTitle": "Which site are you on?",
+  "site.home": "Home site",
+  "site.deployment": "Deployed",
+  "site.switching": "Switching...",
+  "site.switchFailed": "Couldn't switch site. Please try again.",
+
   // Push permission gate
   "push.title": "Notifications Required",
   "push.subtitle":

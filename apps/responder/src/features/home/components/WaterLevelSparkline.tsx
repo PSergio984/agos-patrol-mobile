@@ -15,17 +15,17 @@ import CardTitle from "./common/CardTitle";
 import Skeleton from "./common/Skeleton";
 
 export default function WaterLevelSparkline() {
-  const { responder } = useCoreHook();
+  const { effectiveLocationId } = useCoreHook();
   const [data, setData] = useState<WaterLevelTrendPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useI18n();
 
   useEffect(() => {
-    if (!responder?.locationId) return;
+    if (!effectiveLocationId) return;
 
     const fetchTrend = async () => {
       try {
-        const res = await sensorAPI.getWaterLevelTrend(responder.locationId);
+        const res = await sensorAPI.getWaterLevelTrend(effectiveLocationId);
         setData(res);
       } catch {
         // Silently fail — sparkline is supplementary
@@ -34,11 +34,17 @@ export default function WaterLevelSparkline() {
       }
     };
 
+    // Drop the previous site's trend immediately — deferred a tick because a
+    // synchronous setState inside the effect body trips the render lint.
+    queueMicrotask(() => {
+      setData([]);
+      setIsLoading(true);
+    });
     fetchTrend();
     // Refresh every 5 minutes
     const interval = setInterval(fetchTrend, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [responder?.locationId]);
+  }, [effectiveLocationId]);
 
   if (isLoading) {
     return (

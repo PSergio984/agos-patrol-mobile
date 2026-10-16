@@ -25,7 +25,9 @@ Alarm pipeline and offline resilience are later phases (wayfinder map #1).
 - `src/context/*.tsx` — same providers/hooks as PWA (`useCoreHook`, `useWebSocket`,
   `useWebSocketMessage`, `useNotificationHook`, `useWaterLevel`, `useWeather`,
   `useWaterwayContext`, `useFusionAnalysis`, `useTheme`, `useI18n`).
-  WS url: `${EXPO_PUBLIC_WS_URL}/ws?location_id=…`.
+  WS url: `${EXPO_PUBLIC_WS_URL}/ws?token=…` — the responder token pins the
+  channel to the responder's effective site (active_location_id ?? location_id),
+  re-derived server-side on every connect.
 - `src/types/` — verbatim ports.
 - Env: `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_WS_URL` (see `.env.example`).
 

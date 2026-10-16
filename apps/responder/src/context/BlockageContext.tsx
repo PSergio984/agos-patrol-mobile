@@ -14,6 +14,7 @@ import type {
 import { capitalizeFirstLetter } from "../lib/utils/formatter";
 
 import { useWebSocketMessage } from "./WebsocketContext";
+import { useResetOnSiteChange } from "../hooks/useResetOnSiteChange";
 
 interface WaterwayContextProps {
   status: Status | null;
@@ -35,6 +36,16 @@ export function BlockageProvider({ children }: { children: ReactNode }) {
   const [isFetching, setIsFetching] = useState(true);
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Blockage status is site-scoped — clear it on a site switch so the old
+  // site's state can't show under the new one while the channel re-resolves.
+  useResetOnSiteChange(() => {
+    setStatus(null);
+    setConfidence(null);
+    setWarning(null);
+    setError(null);
+    setIsFetching(true);
+  });
 
   useWebSocketMessage(
     "blockage_detection_update",

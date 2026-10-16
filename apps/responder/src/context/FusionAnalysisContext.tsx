@@ -12,6 +12,7 @@ import type {
 } from "../types/fusionAnalysis";
 
 import { useWebSocketMessage } from "./WebsocketContext";
+import { useResetOnSiteChange } from "../hooks/useResetOnSiteChange";
 
 interface FusionAnalysisContextValue {
   fusionAnalysis: FusionAnalysisData | null;
@@ -30,6 +31,15 @@ export function FusionAnalysisProvider({ children }: { children: ReactNode }) {
   const [isFetching, setIsFetching] = useState<boolean>(true);
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Site-scoped — reset on site switch; the new site's analysis arrives via
+  // the WS initial payload.
+  useResetOnSiteChange(() => {
+    setFusionAnalysis(null);
+    setWarning(null);
+    setError(null);
+    setIsFetching(true);
+  });
 
   useWebSocketMessage(
     "fusion_analysis_update",

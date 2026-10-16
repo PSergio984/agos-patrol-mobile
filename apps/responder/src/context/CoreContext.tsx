@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { Responder } from "../types/responder";
 import { responderAPI } from "../lib/api/responder";
+import { getEffectiveSiteId, getEffectiveSiteName } from "../lib/utils/sites";
 import { router } from "expo-router";
 import { isAxiosError } from "axios";
 import {
@@ -20,10 +21,15 @@ import {
 interface CoreContextValue {
   responderId: string;
   responder: Responder | null;
+  // Effective site = presence override ?? home site. Everything site-scoped
+  // (WS channel, sensor/camera calls, alert cache) keys on this.
+  effectiveLocationId: number | null;
+  effectiveLocationName: string | null;
   isLoading: boolean;
   hydrated: boolean;
   logOut: () => void;
   setResponder: (responder: Responder) => void;
+  setActiveSite: (locationId: number) => Promise<void>;
 }
 
 const CoreContext = createContext<CoreContextValue | undefined>(undefined);
@@ -90,16 +96,42 @@ export function CoreProvider({ children }: { children: ReactNode }) {
     }
   }, [hydrated, responderId, logOut]);
 
+  // Write presence, then refetch details — the server is the source of truth
+  // for the resolved site name and any concurrent membership changes.
+  const setActiveSite = useCallback(
+    async (locationId: number) => {
+      if (!responderId) throw new Error("No responder session");
+      await responderAPI.setActiveSite(locationId);
+      setResponder(await responderAPI.getResponderDetails(responderId));
+    },
+    [responderId]
+  );
+
+  const effectiveLocationId = getEffectiveSiteId(responder);
+  const effectiveLocationName = getEffectiveSiteName(responder);
+
   const contextValue = useMemo(
     () => ({
       responderId,
       responder,
+      effectiveLocationId,
+      effectiveLocationName,
       isLoading,
       hydrated,
       logOut,
       setResponder,
+      setActiveSite,
     }),
-    [responderId, responder, isLoading, hydrated, logOut]
+    [
+      responderId,
+      responder,
+      effectiveLocationId,
+      effectiveLocationName,
+      isLoading,
+      hydrated,
+      logOut,
+      setActiveSite,
+    ]
   );
 
   return (
