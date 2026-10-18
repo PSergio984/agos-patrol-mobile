@@ -1,8 +1,24 @@
 # Patrol
 
-Progressive Web App (PWA) for field responders in AGOS — a real-time water management and flood monitoring platform.
+Responder-facing apps for AGOS — a real-time water management and flood monitoring platform. This repo hosts two apps:
 
-## Stack
+- **PWA** (repo root) — the original progressive web app
+- **Native app** (`apps/responder/`) — React Native (Expo) port of the responder PWA
+
+## Native app (`apps/responder`)
+
+React Native + Expo port of the responder PWA, targeting the same backend API.
+
+- Expo SDK 57, Expo Router, NativeWind v4
+- React 19 + TypeScript
+- Route map and module contract: [`apps/responder/PARITY.md`](apps/responder/PARITY.md)
+
+```bash
+cd apps/responder
+npx expo start        # run in Expo Go or a development build
+```
+
+## PWA Stack
 
 - **Framework**: React 19 + TypeScript
 - **Build**: Vite 7
