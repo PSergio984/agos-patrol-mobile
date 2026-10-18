@@ -14,9 +14,11 @@
       "expo-font"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "ph.agos.patrol"
     },
     "android": {
+      "package": "ph.agos.patrol",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
