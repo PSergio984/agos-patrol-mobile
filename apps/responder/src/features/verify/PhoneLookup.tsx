@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { isAxiosError } from "axios";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import Container from "./components/Container";
@@ -10,6 +9,7 @@ import PhoneNumberInput from "./components/PhoneNumberInput";
 import { verifyAPI } from "../../lib/api/verify";
 import { useVerify } from "./context/VerifyPageContext";
 import { useI18n } from "../../context/I18nContext";
+import { apiErrorMessage } from "../../lib/utils/apiError";
 
 /**
  * Port of PWA src/pages/Verify/pages/PhoneLookup.tsx.
@@ -54,10 +54,11 @@ export default function PhoneLookup() {
       setResponderDetails(res);
       router.push("/(auth)/otp");
     } catch (err) {
-      const detail = isAxiosError(err) && err.response?.data?.detail;
       setError(
-        detail ??
+        apiErrorMessage(
+          err,
           "Unable to reach the server. Please check your connection and try again."
+        )
       );
     } finally {
       setIsSubmitting(false);
