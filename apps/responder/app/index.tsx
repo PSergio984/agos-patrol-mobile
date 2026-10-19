@@ -15,7 +15,8 @@ export default function Index() {
           getResponderId(),
         ]);
         if (!cancelled) {
-          setDestination(token && id ? "/(tabs)" : "/(auth)/verify");
+          const dest = token && id ? "/(tabs)" : "/(auth)/verify";
+          setDestination(dest);
         }
       } catch {
         // Storage read failure — fail closed to verify

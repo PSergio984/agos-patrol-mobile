@@ -16,6 +16,7 @@ import { verifyAPI } from "../../lib/api/verify";
 import { setResponderId, setResponderToken } from "../../lib/storage";
 import { useVerify } from "./context/VerifyPageContext";
 import { useI18n } from "../../context/I18nContext";
+import { apiErrorMessage } from "../../lib/utils/apiError";
 
 /**
  * Port of PWA src/pages/Verify/pages/OTPVerification.tsx.
@@ -82,9 +83,7 @@ export default function OTPVerification() {
           );
         } else {
           setOtpError(
-            err.response?.data?.detail ||
-              err.response?.data?.message ||
-              "Something went wrong. Please try again."
+            apiErrorMessage(err, "Something went wrong. Please try again.")
           );
         }
       } else {
