@@ -19,6 +19,7 @@ import { isAxiosError } from "axios";
 import {
   clearResponderSession,
   getResponderId,
+  getResponderToken,
   removeStoredValue,
 } from "../lib/storage";
 
@@ -48,8 +49,10 @@ export function CoreProvider({ children }: { children: ReactNode }) {
   // SecureStore is async — hydrate the responder id once on mount
   useEffect(() => {
     let cancelled = false;
-    getResponderId()
-      .then((id) => {
+    // getResponderToken also warms the axios cachedToken mirror — without it,
+    // a cold start that skips app/index.tsx sends every request unauthenticated
+    Promise.all([getResponderId(), getResponderToken()])
+      .then(([id]) => {
         if (cancelled) return;
         setResponderId(id ?? "");
         setHydrated(true);
