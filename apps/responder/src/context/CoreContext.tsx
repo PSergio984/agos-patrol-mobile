@@ -52,9 +52,12 @@ export function CoreProvider({ children }: { children: ReactNode }) {
     // getResponderToken also warms the axios cachedToken mirror — without it,
     // a cold start that skips app/index.tsx sends every request unauthenticated
     Promise.all([getResponderId(), getResponderToken()])
-      .then(([id]) => {
+      .then(([id, token]) => {
         if (cancelled) return;
-        setResponderId(id ?? "");
+        // An id without a token is a broken session, not a partial one —
+        // treat it as no session so CoreGate routes to verify instead of
+        // rendering tabs whose every request 401s with no way out.
+        setResponderId(id && token ? id : "");
         setHydrated(true);
       })
       .catch(() => {

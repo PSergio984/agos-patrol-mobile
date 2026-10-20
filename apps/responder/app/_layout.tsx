@@ -50,11 +50,14 @@ export default function RootLayout() {
     if (!errorUtils?.getGlobalHandler) return;
     const prev = errorUtils.getGlobalHandler();
     errorUtils.setGlobalHandler((error: unknown, isFatal?: boolean) => {
-      setFatal(
-        `[${isFatal ? "fatal" : "non-fatal"}] ${String(
-          (error as { message?: string })?.message ?? error
-        )}`
-      );
+      // Non-fatal reports (ErrorUtils.reportError from libraries/listeners)
+      // still go to the original handler — replacing the whole app for a
+      // recoverable error would strand the responder with no way back.
+      if (isFatal) {
+        setFatal(
+          String((error as { message?: string })?.message ?? error)
+        );
+      }
       prev?.(error, isFatal);
     });
     return () => errorUtils.setGlobalHandler(prev);
