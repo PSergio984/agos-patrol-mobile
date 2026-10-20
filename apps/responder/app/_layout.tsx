@@ -52,8 +52,8 @@ export default function RootLayout() {
     errorUtils.setGlobalHandler((error: unknown, isFatal?: boolean) => {
       setFatal(
         `[${isFatal ? "fatal" : "non-fatal"}] ${String(
-          (error as { message?: string })?.message ?? error,
-        )}`,
+          (error as { message?: string })?.message ?? error
+        )}`
       );
       prev?.(error, isFatal);
     });
