@@ -54,9 +54,7 @@ export default function RootLayout() {
       // still go to the original handler — replacing the whole app for a
       // recoverable error would strand the responder with no way back.
       if (isFatal) {
-        setFatal(
-          String((error as { message?: string })?.message ?? error)
-        );
+        setFatal(String((error as { message?: string })?.message ?? error));
       }
       prev?.(error, isFatal);
     });
