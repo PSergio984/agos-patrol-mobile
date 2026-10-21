@@ -8,6 +8,7 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  message?: string;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -16,8 +17,8 @@ export default class ErrorBoundary extends Component<Props, State> {
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, message: String(error?.message ?? error) };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -41,7 +42,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             Something went wrong
           </Text>
           <Text className="text-sm text-gray-500 dark:text-gray-400 mb-4 text-center">
-            An unexpected error occurred.
+            {this.state.message ?? "An unexpected error occurred."}
           </Text>
           <Pressable
             onPress={this.handleRetry}
