@@ -12,6 +12,7 @@ React Native + Expo port of the responder PWA, targeting the same backend API.
 - Expo SDK 57, Expo Router, NativeWind v4
 - React 19 + TypeScript
 - Route map and module contract: [`apps/responder/PARITY.md`](apps/responder/PARITY.md)
+- Setup, env vars, and conventions: [`apps/responder/README.md`](apps/responder/README.md)
 
 ```bash
 cd apps/responder
