@@ -1,8 +1,24 @@
 # Patrol
 
-Progressive Web App (PWA) for field responders in AGOS — a real-time water management and flood monitoring platform.
+Responder-facing apps for AGOS — a real-time water management and flood monitoring platform. This repo hosts two apps:
 
-## Stack
+- **PWA** (repo root) — the original progressive web app
+- **Native app** (`apps/responder/`) — React Native (Expo) port of the responder PWA
+
+## Native app (`apps/responder`)
+
+React Native + Expo port of the responder PWA, targeting the same backend API.
+
+- Expo SDK 57, Expo Router, NativeWind v4
+- React 19 + TypeScript
+- Route map and module contract: [`apps/responder/PARITY.md`](apps/responder/PARITY.md)
+
+```bash
+cd apps/responder
+npx expo start        # run in Expo Go or a development build
+```
+
+## PWA Stack
 
 - **Framework**: React 19 + TypeScript
 - **Build**: Vite 7
@@ -37,30 +53,30 @@ npm run dev
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend API URL (e.g., `http://localhost:8000`) |
-| `VITE_API_WS_URL` | Backend WebSocket origin (e.g., `ws://localhost:8000`; app appends `/ws`) |
+| Variable            | Description                                                               |
+| ------------------- | ------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL` | Backend API URL (e.g., `http://localhost:8000`)                           |
+| `VITE_API_WS_URL`   | Backend WebSocket origin (e.g., `ws://localhost:8000`; app appends `/ws`) |
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start dev server with HMR |
-| `npm run build` | Type-check and build for production |
-| `npm run lint` | Run ESLint |
-| `npm run preview` | Preview production build |
+| Command           | Description                         |
+| ----------------- | ----------------------------------- |
+| `npm run dev`     | Start dev server with HMR           |
+| `npm run build`   | Type-check and build for production |
+| `npm run lint`    | Run ESLint                          |
+| `npm run preview` | Preview production build            |
 
 ## Pages
 
-| Route | Page | Description |
-|-------|------|-------------|
-| `/home` | Home | Dashboard with fusion risk, blockage, water level + 24h sparkline, weather cards |
-| `/alerts` | Alerts | Paginated alert list with server-side type filters, "Load more", acknowledgement |
-| `/me` | Profile | Push notification prefs, language, theme, logout |
-| `/install` | Install Gate | PWA install instructions (Android: prompt API, iOS: step-by-step Safari guide) |
-| `/verify/phone-lookup` | Phone Lookup | Enter phone number to start registration |
-| `/verify/otp-verification` | OTP Verification | Enter OTP to confirm identity |
+| Route                      | Page             | Description                                                                      |
+| -------------------------- | ---------------- | -------------------------------------------------------------------------------- |
+| `/home`                    | Home             | Dashboard with fusion risk, blockage, water level + 24h sparkline, weather cards |
+| `/alerts`                  | Alerts           | Paginated alert list with server-side type filters, "Load more", acknowledgement |
+| `/me`                      | Profile          | Push notification prefs, language, theme, logout                                 |
+| `/install`                 | Install Gate     | PWA install instructions (Android: prompt API, iOS: step-by-step Safari guide)   |
+| `/verify/phone-lookup`     | Phone Lookup     | Enter phone number to start registration                                         |
+| `/verify/otp-verification` | OTP Verification | Enter OTP to confirm identity                                                    |
 
 ## Auth Flow
 
@@ -109,11 +125,11 @@ src/
 
 ## Key Differences from Admin Frontend
 
-| Concern | Admin Frontend | Responders PWA |
-|---------|---------------|----------------|
-| Auth | JWT (access + refresh tokens) | JWT responder token (90-day) + `responderId` in localStorage |
-| Field naming | snake_case directly | camelCase (axios auto-converts) |
-| Push notifications | Sends them | Receives them |
-| Offline support | None | Offline ack queue |
-| i18n | None | English + Filipino |
-| Dark mode | None | Light/dark/system |
+| Concern            | Admin Frontend                | Responders PWA                                               |
+| ------------------ | ----------------------------- | ------------------------------------------------------------ |
+| Auth               | JWT (access + refresh tokens) | JWT responder token (90-day) + `responderId` in localStorage |
+| Field naming       | snake_case directly           | camelCase (axios auto-converts)                              |
+| Push notifications | Sends them                    | Receives them                                                |
+| Offline support    | None                          | Offline ack queue                                            |
+| i18n               | None                          | English + Filipino                                           |
+| Dark mode          | None                          | Light/dark/system                                            |
