@@ -3,10 +3,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { router } from "expo-router";
+import type * as NotificationsTypes from "expo-notifications";
 import { getNotifications } from "../lib/notifications";
+import { routeForNotificationResponse } from "../lib/notificationResponse";
 import { useCoreHook } from "./CoreContext";
 import { alertsAPI } from "../lib/api/alert";
 import {
@@ -25,6 +29,10 @@ const NotificationContext = createContext<NotificationContextValue | undefined>(
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
+  // Deduped by request id: some platforms also replay the launch response to
+  // the listener, and getLastNotificationResponse would navigate twice for
+  // the same tap.
+  const handledResponseIds = useRef(new Set<string>());
 
   const { responderId, effectiveLocationId } = useCoreHook();
 
@@ -61,11 +69,44 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const data = notification.request.content.data as
           Record<string, unknown> | undefined;
         triggerAlertFeedback(
-          (data?.alertType as AlertSeverity | undefined) ?? "announcement"
+          ((data?.alertType ?? data?.type) as AlertSeverity | undefined) ??
+            "announcement"
         );
         setUnreadCount((prev) => prev + 1);
       }
     );
+    return () => subscription.remove();
+  }, []);
+
+  // Notification taps deep-link into the alerts tab. Dispatch-bearing
+  // pushes (type "alarm") carry the dispatchId — alerts.tsx resolves it to
+  // a delivery and opens the detail sheet; other taps just open the list.
+  useEffect(() => {
+    const Notifications = getNotifications();
+    if (!Notifications) return;
+    const handleResponse = (
+      response: NotificationsTypes.NotificationResponse
+    ) => {
+      const requestId = response.notification.request.identifier;
+      if (handledResponseIds.current.has(requestId)) return;
+      handledResponseIds.current.add(requestId);
+      router.push(routeForNotificationResponse(response));
+    };
+    const subscription =
+      Notifications.addNotificationResponseReceivedListener(handleResponse);
+    // Cold start: a tap that launched the app is held as the "last response"
+    // until consumed — the listener above only sees taps while running.
+    // getLastNotificationResponse throws UnavailabilityError where the native
+    // emitter lacks it (web, stale dev-client) — that's survivable, skip it.
+    try {
+      const launch = Notifications.getLastNotificationResponse();
+      if (launch) {
+        Notifications.clearLastNotificationResponse();
+        handleResponse(launch);
+      }
+    } catch {
+      // no launch response support on this runtime
+    }
     return () => subscription.remove();
   }, []);
 

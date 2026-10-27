@@ -1,3 +1,4 @@
+import { isAxiosError } from "axios";
 import type { AcknowledgeNotificationPayload } from "../../../types/alert";
 import { alertsAPI } from "../../../lib/api/alert";
 import { getStoredValue, setStoredValue } from "../../../lib/storage";
@@ -56,8 +57,12 @@ export function flushQueue(): Promise<number> {
         try {
           await alertsAPI.acknowledgeNotification(payload);
           synced++;
-        } catch {
-          remaining.push(payload);
+        } catch (err) {
+          // 409 = acknowledged server-side (another device/PWA, or the POST
+          // landed but the response was lost). Re-queueing it would 409 on
+          // every flush forever — count it synced and drop it.
+          if (isAxiosError(err) && err.response?.status === 409) synced++;
+          else remaining.push(payload);
         }
       }
 

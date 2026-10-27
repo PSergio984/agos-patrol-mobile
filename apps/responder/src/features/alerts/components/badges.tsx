@@ -17,7 +17,9 @@ export const AlertTypeBadge = ({
 }) => {
   const { t } = useI18n();
   const label =
-    type === "blockage" ? t("alerts.surfaceObstruction") : type.toUpperCase();
+    type === "blockage"
+      ? t("alerts.surfaceObstruction")
+      : (type === "alarm" ? t("alerts.alarm") : type).toUpperCase();
 
   const variantClasses =
     variant === "pill"

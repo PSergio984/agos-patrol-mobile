@@ -58,6 +58,7 @@ const fil: Record<TranslationKey, string> = {
   "alerts.placeholder": "Maglagay ng opsyonal na mensahe...",
   "alerts.notes": "MGA TALA",
   "alerts.all": "Lahat",
+  "alerts.alarm": "Alarma",
   "alerts.critical": "Kritikal",
   "alerts.warning": "Babala",
   "alerts.announcement": "Anunsyo",

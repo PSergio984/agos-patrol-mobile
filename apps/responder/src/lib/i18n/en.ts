@@ -56,6 +56,7 @@ const en = {
   "alerts.placeholder": "Enter optional acknowledgment message...",
   "alerts.notes": "NOTES",
   "alerts.all": "All",
+  "alerts.alarm": "Alarm",
   "alerts.critical": "Critical",
   "alerts.warning": "Warning",
   "alerts.announcement": "Announcement",

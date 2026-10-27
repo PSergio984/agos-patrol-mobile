@@ -1,5 +1,10 @@
 export type NotificationType =
-  "warning" | "critical" | "blockage" | "announcement" | "maintenance";
+  | "alarm"
+  | "warning"
+  | "critical"
+  | "blockage"
+  | "announcement"
+  | "maintenance";
 
 export interface Alert {
   id: string;

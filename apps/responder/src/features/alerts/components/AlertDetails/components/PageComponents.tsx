@@ -10,6 +10,7 @@ import { CircleCheck, UserCheck } from "lucide-react-native";
 import { isAxiosError } from "axios";
 import type {
   AcknowledgeNotificationPayload,
+  AcknowledgeNotificationResponse,
   NotificationType,
 } from "../../../../../types/alert";
 import { formatDate } from "../../../../../lib/utils/formatter";
@@ -97,7 +98,24 @@ export const AcknowledgeNotification = () => {
         res.acknowledgedAt
       );
       reduceUnreadCount(1);
-    } catch {
+    } catch (err) {
+      // 409 = already acknowledged server-side (e.g. acked on the PWA first).
+      // That IS the success state — reflect it locally instead of queueing
+      // a retry that would 409 again on every offline-queue flush. The body
+      // carries only {detail} today — if a future backend returns the stored
+      // ack, its fields win; never stamp the just-typed message on an ack the
+      // server never stored.
+      if (isAxiosError(err) && err.response?.status === 409) {
+        const data = err.response.data as
+          Partial<AcknowledgeNotificationResponse> | undefined;
+        acknowledgeAlert(
+          chosenAlert.id,
+          data?.acknowledgeMessage ?? null,
+          data?.acknowledgedAt ?? new Date().toISOString()
+        );
+        reduceUnreadCount(1);
+        return;
+      }
       // Queue for retry when back online
       await enqueueAcknowledgement({
         message: message || null,
