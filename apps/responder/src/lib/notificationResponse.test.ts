@@ -64,6 +64,7 @@ describe("routeForNotificationResponse", () => {
         title: "FLOOD ALARM",
         message: "Evacuate the area",
         issuedAt: "2026-10-15T00:00:00Z",
+        locationId: "1",
       },
     });
   });

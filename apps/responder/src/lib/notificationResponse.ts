@@ -64,6 +64,15 @@ export function routeForNotificationResponse(
         ? (alarm as Record<string, unknown>).issuedAt
         : undefined;
     if (typeof issuedAt === "string" && issuedAt) params.issuedAt = issuedAt;
+    const locationId =
+      alarm && typeof alarm === "object"
+        ? (alarm as Record<string, unknown>).location_id
+        : undefined;
+    const locN =
+      typeof locationId === "string" ? Number(locationId) : locationId;
+    if (typeof locN === "number" && Number.isFinite(locN)) {
+      params.locationId = String(locN);
+    }
     return { pathname: "/alarm", params };
   }
 

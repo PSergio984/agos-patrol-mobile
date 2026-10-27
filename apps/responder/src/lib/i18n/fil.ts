@@ -145,6 +145,7 @@ const fil: Record<TranslationKey, string> = {
   "alarm.siteLabel": "Ang iyong lokasyon",
   "alarm.fallbackTitle": "Alarma sa baha",
   "alarm.viewDetails": "Tingnan ang detalye",
+  "alarm.dismiss": "Isara",
 
   // Verify page
   "verify.activateAccount": "I-activate ang Iyong Account",

@@ -142,6 +142,7 @@ const en = {
   "alarm.siteLabel": "Your site",
   "alarm.fallbackTitle": "Flood alarm",
   "alarm.viewDetails": "View details",
+  "alarm.dismiss": "Dismiss",
 
   // Verify page
   "verify.activateAccount": "Activate Your Account",

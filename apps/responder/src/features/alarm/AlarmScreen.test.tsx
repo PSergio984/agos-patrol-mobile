@@ -7,6 +7,7 @@ import type {
   Alert,
   AlertPaginatedResponse,
 } from "../../types/alert";
+import type { Responder } from "../../types/responder";
 
 const ALARM_ALERT: Alert = {
   id: "delivery-9",
@@ -25,8 +26,16 @@ const ALARM_ALERT: Alert = {
 
 let mockParams: Record<string, string> = {};
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
+const mockBack = jest.fn();
+const mockCanGoBack = jest.fn<() => boolean>();
 jest.mock("expo-router", () => ({
-  router: { push: (href: unknown) => mockPush(href) },
+  router: {
+    push: (href: unknown) => mockPush(href),
+    replace: (href: unknown) => mockReplace(href),
+    back: () => mockBack(),
+    canGoBack: () => mockCanGoBack(),
+  },
   useLocalSearchParams: () => mockParams,
 }));
 
@@ -63,6 +72,15 @@ jest.mock("../../lib/api/alert", () => ({
   },
 }));
 
+const mockGetResponderDetails =
+  jest.fn<(responderId: string) => Promise<Responder>>();
+jest.mock("../../lib/api/responder", () => ({
+  responderAPI: {
+    getResponderDetails: (responderId: string) =>
+      mockGetResponderDetails(responderId),
+  },
+}));
+
 const mockEnqueue =
   jest.fn<(p: AcknowledgeNotificationPayload) => Promise<void>>();
 jest.mock("../alerts/utils/offlineQueue", () => ({
@@ -74,12 +92,39 @@ jest.mock("../../context/I18nContext", () => ({
   useI18n: () => ({ t: (key: string) => key }),
 }));
 
+const RESPONDER: Responder = {
+  id: "r1",
+  firstName: "Ana",
+  lastName: "Santos",
+  status: "active",
+  phoneNumber: "0917",
+  locationId: 1,
+  locationName: "Home Site",
+  activeLocationId: null,
+  activeLocationName: null,
+  deployments: [
+    {
+      id: 9,
+      locationId: 7,
+      locationName: "Riverside Post",
+      startsAt: "2026-01-01T00:00:00Z",
+      endsAt: null,
+      plannedEndsAt: null,
+      createdBy: "admin",
+    },
+  ],
+  createdAt: "2026-01-01T00:00:00Z",
+  activatedAt: "2026-01-01T00:00:00Z",
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockParams = { dispatchId: "7", title: "Push title", message: "Push body" };
   mockGetResponderId.mockResolvedValue("r1");
   mockGetResponderToken.mockResolvedValue("tok");
   mockGetAlerts.mockResolvedValue({ items: [ALARM_ALERT], hasMore: false });
+  mockGetResponderDetails.mockResolvedValue(RESPONDER);
+  mockCanGoBack.mockReturnValue(true);
 });
 
 describe("AlarmScreen", () => {
@@ -179,14 +224,49 @@ describe("AlarmScreen", () => {
     expect(screen.queryByText("alerts.acknowledge")).toBeNull();
   });
 
-  it("View details deep-links to the alerts sheet path", async () => {
+  it("exits the resolving state when SecureStore reads fail", async () => {
+    mockGetResponderId.mockRejectedValue(new Error("keystore locked"));
+    const screen = await render(<AlarmScreen />);
+
+    await waitFor(() => screen.getByText("alarm.viewDetails"));
+    expect(screen.getByText("Push title")).toBeTruthy();
+    expect(mockGetAlerts).not.toHaveBeenCalled();
+  });
+
+  it("shows the alarm's site name when the push carries a matched locationId", async () => {
+    mockParams.locationId = "7";
+    const screen = await render(<AlarmScreen />);
+
+    await waitFor(() => screen.getByText("Riverside Post"));
+    expect(mockGetResponderDetails).toHaveBeenCalledWith("r1");
+  });
+
+  it("falls back to the generic site label without a locationId param", async () => {
+    const screen = await render(<AlarmScreen />);
+
+    await waitFor(() => screen.getByText("alarm.viewDetails"));
+    expect(screen.getByText("alarm.siteLabel")).toBeTruthy();
+    expect(mockGetResponderDetails).not.toHaveBeenCalled();
+  });
+
+  it("View details replaces onto the alerts sheet path", async () => {
     const screen = await render(<AlarmScreen />);
     await waitFor(() => screen.getByText("alarm.viewDetails"));
 
     await fireEvent.press(screen.getByText("alarm.viewDetails"));
-    expect(mockPush).toHaveBeenCalledWith({
+    // replace — the modal must leave the stack, not push a second (tabs).
+    expect(mockReplace).toHaveBeenCalledWith({
       pathname: "/(tabs)/alerts",
       params: { dispatchId: "7" },
     });
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("dismisses via the close control", async () => {
+    const screen = await render(<AlarmScreen />);
+    await waitFor(() => screen.getByText("alarm.viewDetails"));
+
+    await fireEvent.press(screen.getByLabelText("alarm.dismiss"));
+    expect(mockBack).toHaveBeenCalled();
   });
 });
