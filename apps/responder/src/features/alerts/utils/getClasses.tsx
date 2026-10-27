@@ -4,6 +4,7 @@ import {
   Ban,
   CircleAlert,
   Megaphone,
+  Siren,
   TriangleAlert,
   Wrench,
   type LucideIcon,
@@ -23,6 +24,14 @@ const TYPE_CONFIG: Record<
     containerBorderColor: string;
   }
 > = {
+  alarm: {
+    icon: Siren,
+    iconColor: "#b91c1c", // red-700
+    badgeColor:
+      "bg-red-200 border-red-500 dark:bg-red-950/70 dark:border-red-600",
+    badgeTextColor: "text-red-900 dark:text-red-200",
+    containerBorderColor: "border-red-700",
+  },
   critical: {
     icon: TriangleAlert,
     iconColor: "#dc2626", // red-600

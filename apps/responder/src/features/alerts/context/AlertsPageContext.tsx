@@ -33,6 +33,7 @@ interface AlertsPageContextValue {
   handleFilterChange: (filter: AlertTypeFilter) => void;
   handleSetChosenAlert: (alertId: string) => void;
   handleCloseAlertDetail: () => void;
+  openAlertByDispatchId: (dispatchId: number) => Promise<void>;
   loadMore: () => void;
   refresh: () => void;
   acknowledgeAlert: (
@@ -51,6 +52,7 @@ export type AlertTypeFilter = "all" | NotificationType;
 
 export const FILTERS = [
   "all",
+  "alarm",
   "critical",
   "warning",
   "announcement",
@@ -213,6 +215,30 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
     setChosenAlert(null);
   }, []);
 
+  // Push-tap deep link: the payload carries the shared dispatchId, but the
+  // detail sheet needs the responder's own delivery. Search the loaded list
+  // first; on a miss (push arrived before the refresh, or the alert sits
+  // under another filter) fall back to an unfiltered page-1 fetch — a fresh
+  // dispatch is always on page 1. A total miss just leaves the list open.
+  const openAlertByDispatchId = useCallback(
+    async (dispatchId: number) => {
+      const inList = alerts?.find((a) => a.dispatchId === dispatchId);
+      if (inList) {
+        setChosenAlert(inList);
+        return;
+      }
+      if (!responderId) return;
+      try {
+        const res = await alertsAPI.getAlerts(responderId, 1);
+        const match = res.items.find((a) => a.dispatchId === dispatchId);
+        if (match) setChosenAlert(match);
+      } catch {
+        // Offline — the tap still lands on the alerts list.
+      }
+    },
+    [alerts, responderId]
+  );
+
   const acknowledgeAlert = useCallback(
     (alertId: string, message: string | null, acknowledgedAt: string) => {
       setAlerts((prev) => {
@@ -353,6 +379,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
       handleFilterChange,
       handleSetChosenAlert,
       handleCloseAlertDetail,
+      openAlertByDispatchId,
       loadMore,
       refresh,
       acknowledgeAlert,
@@ -371,6 +398,7 @@ export function AlertsPageProvider({ children }: { children: ReactNode }) {
       handleFilterChange,
       handleSetChosenAlert,
       handleCloseAlertDetail,
+      openAlertByDispatchId,
       loadMore,
       refresh,
       acknowledgeAlert,

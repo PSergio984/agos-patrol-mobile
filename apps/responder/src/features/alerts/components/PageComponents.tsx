@@ -6,6 +6,7 @@ import { useI18n } from "../../../context/I18nContext";
 
 const filterLabelKeys = {
   all: "alerts.all",
+  alarm: "alerts.alarm",
   critical: "alerts.critical",
   warning: "alerts.warning",
   announcement: "alerts.announcement",
