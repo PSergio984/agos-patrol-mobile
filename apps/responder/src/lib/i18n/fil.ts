@@ -132,6 +132,11 @@ const fil: Record<TranslationKey, string> = {
     "Hindi ma-load ang notification settings. Subukan muli sa ilang sandali.",
   "push.errorSubscribe":
     "May nangyaring mali sa pag-setup ng notipikasyon. Subukan muli.",
+  "push.dndTitle": "Payagan ang alarma sa Do Not Disturb",
+  "push.dndBody":
+    "Puwedeng tumunog ang flood alarm ng Patrol kahit naka-Do Not Disturb, pero kailangan mo itong i-allow sa settings.",
+  "push.dndEnable": "Payagan sa settings",
+  "push.dndLater": "Huwag muna",
   "push.logoutButton": "Mag-logout",
   "profile.prefError": "Hindi ma-load ang mga notification preference",
 

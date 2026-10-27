@@ -129,6 +129,11 @@ const en = {
     "Could not load notification settings. Try again in a moment.",
   "push.errorSubscribe":
     "Something went wrong while setting up notifications. Please retry.",
+  "push.dndTitle": "Let alarms ring in Do Not Disturb",
+  "push.dndBody":
+    "Patrol's flood alarm can ring while Do Not Disturb is on, but only if you allow it in system settings.",
+  "push.dndEnable": "Allow in settings",
+  "push.dndLater": "Not now",
   "push.logoutButton": "Log out",
   "profile.prefError": "Failed to fetch notification preferences",
 

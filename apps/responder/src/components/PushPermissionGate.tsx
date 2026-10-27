@@ -1,5 +1,18 @@
-import { Bell, BellOff, ShieldAlert } from "lucide-react-native";
-import { Linking, Modal, Platform, Pressable, Text, View } from "react-native";
+import { Bell, BellOff, ShieldAlert, Siren } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import {
+  AppState,
+  Linking,
+  Modal,
+  Platform,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
+import {
+  alarmChannelBypassesDnd,
+  ensureAlarmChannel,
+} from "../lib/alarmChannel";
 import { isExpoGo } from "../lib/notifications";
 import { useCoreHook } from "../context/CoreContext";
 import { useI18n } from "../context/I18nContext";
@@ -150,10 +163,72 @@ function GateContent({
   );
 }
 
+function DndPrompt({
+  onEnable,
+  onDismiss,
+}: {
+  onEnable: () => void;
+  onDismiss: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <View className="flex-col items-center gap-3">
+        <View className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-3">
+          <Siren size={28} color="#d97706" />
+        </View>
+        <Text className="text-lg font-poppins-semibold dark:text-white text-center">
+          {t("push.dndTitle")}
+        </Text>
+        <Text className="text-sm text-gray-600 dark:text-gray-300 text-center">
+          {t("push.dndBody")}
+        </Text>
+      </View>
+      <Pressable
+        onPress={onEnable}
+        className="w-full mt-5 rounded-lg bg-accent py-2.5 active:opacity-90"
+      >
+        <Text className="text-sm font-poppins-semibold text-white text-center">
+          {t("push.dndEnable")}
+        </Text>
+      </Pressable>
+      <Pressable
+        onPress={onDismiss}
+        className="w-full mt-2 rounded-lg border border-gray-300 dark:border-slate-600 py-2.5 active:bg-gray-100 dark:active:bg-slate-700"
+      >
+        <Text className="text-sm font-poppins-medium text-gray-700 dark:text-gray-200 text-center">
+          {t("push.dndLater")}
+        </Text>
+      </Pressable>
+    </>
+  );
+}
+
 export default function PushPermissionGate() {
   const { responderId } = useCoreHook();
   const { permission, isSubscribed, isSubscribing, error, subscribe, recheck } =
     usePushNotifications();
+
+  const [dndBypassed, setDndBypassed] = useState<boolean | null>(null);
+  const [dndDismissed, setDndDismissed] = useState(false);
+
+  // After subscribing, alarm pushes only ring through Do Not Disturb if the
+  // user grants notification-policy access — check once per subscribe/dismiss
+  // and again whenever the app returns (they may have just toggled it).
+  useEffect(() => {
+    if (Platform.OS !== "android" || !isSubscribed || dndDismissed) return;
+    const check = () =>
+      void ensureAlarmChannel()
+        .then(alarmChannelBypassesDnd)
+        .then(setDndBypassed)
+        // No grant state readable → leave null → don't prompt.
+        .catch(() => {});
+    check();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") check();
+    });
+    return () => sub.remove();
+  }, [isSubscribed, dndDismissed]);
 
   // Remote push cannot work in Expo Go at all — gating would only block
   // development smoke tests. Dev builds and production enforce normally.
@@ -162,6 +237,39 @@ export default function PushPermissionGate() {
     !!responderId &&
     !isSubscribed &&
     (permission !== "granted" || error !== null);
+
+  const showDndPrompt =
+    !needsGate &&
+    !isExpoGo &&
+    Platform.OS === "android" &&
+    !!responderId &&
+    isSubscribed &&
+    dndBypassed === false &&
+    !dndDismissed;
+
+  if (showDndPrompt) {
+    return (
+      <Modal
+        visible
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDndDismissed(true)}
+      >
+        <View className="flex-1 bg-black/50 items-center justify-center p-4">
+          <View className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-800 p-6">
+            <DndPrompt
+              onEnable={() =>
+                void Linking.sendIntent(
+                  "android.settings.NOTIFICATION_POLICY_ACCESS_SETTINGS"
+                ).catch(() => {})
+              }
+              onDismiss={() => setDndDismissed(true)}
+            />
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   if (!needsGate) return null;
 
