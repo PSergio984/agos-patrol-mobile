@@ -9,7 +9,9 @@ import {
   Text,
   View,
 } from "react-native";
+import Constants from "expo-constants";
 import {
+  ALARM_CHANNEL_ID,
   alarmChannelBypassesDnd,
   ensureAlarmChannel,
 } from "../lib/alarmChannel";
@@ -211,23 +213,49 @@ export default function PushPermissionGate() {
     usePushNotifications();
 
   const [dndBypassed, setDndBypassed] = useState<boolean | null>(null);
-  const [dndDismissed, setDndDismissed] = useState(false);
-  const [dndDismissedStored, setDndDismissedStored] = useState(false);
-
-  // "Not now" is per-responder and permanent — if the grant is unsatisfiable
-  // (user locked the channel's Override-DND, or the OEM broke the settings
-  // screen), a one-time prompt must not become a per-session nag.
-  const dndDismissKey = `dndAlarmPromptDismissed.${responderId}`;
+  // null = never asked → policy-access screen; "attempted" → the flag is still
+  // off so the remaining cause is a user-locked channel → channel settings;
+  // "dismissed" = asked for good. Per-responder, persisted.
+  const [dndPromptState, setDndPromptState] = useState<
+    "attempted" | "dismissed" | null
+  >(null);
+  const dndPromptKey = `dndAlarmPrompt.${responderId}`;
   useEffect(() => {
     if (Platform.OS !== "android" || !responderId) return;
-    void getStoredValue(dndDismissKey)
-      .then((v) => setDndDismissedStored(v === "1"))
+    void getStoredValue(dndPromptKey)
+      .then((v) =>
+        setDndPromptState(v === "attempted" || v === "dismissed" ? v : null)
+      )
       .catch(() => {});
-  }, [responderId, dndDismissKey]);
+  }, [responderId, dndPromptKey]);
 
   const dismissDndPrompt = () => {
-    setDndDismissed(true);
-    void setStoredValue(dndDismissKey, "1").catch(() => {});
+    setDndPromptState("dismissed");
+    void setStoredValue(dndPromptKey, "dismissed").catch(() => {});
+  };
+
+  const openDndSettings = () => {
+    if (dndPromptState === "attempted") {
+      // Policy access was already attempted and the flag still reads off —
+      // the user locked Override-DND on the channel itself, which only the
+      // channel's own settings page can unlock.
+      void Linking.sendIntent(
+        "android.settings.CHANNEL_NOTIFICATION_SETTINGS",
+        [
+          { key: "android.provider.extra.CHANNEL_ID", value: ALARM_CHANNEL_ID },
+          {
+            key: "android.provider.extra.APP_PACKAGE",
+            value: Constants.expoConfig?.android?.package ?? "ph.agos.patrol",
+          },
+        ]
+      ).catch(() => {});
+      return;
+    }
+    setDndPromptState("attempted");
+    void setStoredValue(dndPromptKey, "attempted").catch(() => {});
+    void Linking.sendIntent(
+      "android.settings.NOTIFICATION_POLICY_ACCESS_SETTINGS"
+    ).catch(() => {});
   };
 
   // After subscribing, alarm pushes only ring through Do Not Disturb if the
@@ -237,8 +265,7 @@ export default function PushPermissionGate() {
     if (
       Platform.OS !== "android" ||
       !isSubscribed ||
-      dndDismissed ||
-      dndDismissedStored
+      dndPromptState === "dismissed"
     )
       return;
     const check = () =>
@@ -252,7 +279,7 @@ export default function PushPermissionGate() {
       if (state === "active") check();
     });
     return () => sub.remove();
-  }, [isSubscribed, dndDismissed, dndDismissedStored]);
+  }, [isSubscribed, dndPromptState]);
 
   // Remote push cannot work in Expo Go at all — gating would only block
   // development smoke tests. Dev builds and production enforce normally.
@@ -269,8 +296,7 @@ export default function PushPermissionGate() {
     !!responderId &&
     isSubscribed &&
     dndBypassed === false &&
-    !dndDismissed &&
-    !dndDismissedStored;
+    dndPromptState !== "dismissed";
 
   if (showDndPrompt) {
     return (
@@ -283,11 +309,7 @@ export default function PushPermissionGate() {
         <View className="flex-1 bg-black/50 items-center justify-center p-4">
           <View className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-800 p-6">
             <DndPrompt
-              onEnable={() =>
-                void Linking.sendIntent(
-                  "android.settings.NOTIFICATION_POLICY_ACCESS_SETTINGS"
-                ).catch(() => {})
-              }
+              onEnable={openDndSettings}
               onDismiss={dismissDndPrompt}
             />
           </View>
