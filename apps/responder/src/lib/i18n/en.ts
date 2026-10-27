@@ -138,6 +138,12 @@ const en = {
   "push.logoutButton": "Log out",
   "profile.prefError": "Failed to fetch notification preferences",
 
+  // Alarm takeover screen
+  "alarm.siteLabel": "Your site",
+  "alarm.fallbackTitle": "Flood alarm",
+  "alarm.viewDetails": "View details",
+  "alarm.dismiss": "Dismiss",
+
   // Verify page
   "verify.activateAccount": "Activate Your Account",
   "verify.activateSubtitle":

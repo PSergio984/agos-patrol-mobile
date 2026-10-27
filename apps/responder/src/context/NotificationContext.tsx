@@ -31,7 +31,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
   // Deduped by request id: some platforms also replay the launch response to
   // the listener, and getLastNotificationResponse would navigate twice for
-  // the same tap.
+  // the same tap. Entries expire — a re-tap of the same tray notification
+  // minutes later is a new user action, not a replay.
   const handledResponseIds = useRef(new Set<string>());
 
   const { responderId, effectiveLocationId } = useCoreHook();
@@ -78,9 +79,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, []);
 
-  // Notification taps deep-link into the alerts tab. Dispatch-bearing
-  // pushes (type "alarm") carry the dispatchId — alerts.tsx resolves it to
-  // a delivery and opens the detail sheet; other taps just open the list.
+  // Notification taps deep-link in: alarm pushes (data.type "alarm") go to
+  // the /alarm takeover screen; other dispatch-bearing pushes land on the
+  // alerts tab where alerts.tsx resolves the dispatchId to a delivery and
+  // opens the detail sheet; remaining taps just open the list.
   useEffect(() => {
     const Notifications = getNotifications();
     if (!Notifications) return;
@@ -90,7 +92,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const requestId = response.notification.request.identifier;
       if (handledResponseIds.current.has(requestId)) return;
       handledResponseIds.current.add(requestId);
-      router.push(routeForNotificationResponse(response));
+      // Replay dedup is only needed at mount — release the id after a few
+      // seconds so a deliberate re-tap of the same notification still routes.
+      setTimeout(() => handledResponseIds.current.delete(requestId), 5_000);
+      // navigate (not push): a second alarm reuses the existing /alarm screen
+      // with fresh params instead of stacking a modal over a modal, and an
+      // alerts tap focuses the existing (tabs) entry rather than duplicating
+      // the provider tree.
+      router.navigate(routeForNotificationResponse(response));
     };
     const subscription =
       Notifications.addNotificationResponseReceivedListener(handleResponse);
@@ -102,7 +111,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const launch = Notifications.getLastNotificationResponse();
       if (launch) {
         Notifications.clearLastNotificationResponse();
-        handleResponse(launch);
+        // Bound staleness: this provider only mounts post-auth — a response
+        // whose app was killed pre-login would otherwise replay an old
+        // takeover on the next session, possibly hours later.
+        const receivedAt = launch.notification.date;
+        const stale =
+          typeof receivedAt === "number" &&
+          Number.isFinite(receivedAt) &&
+          Date.now() - receivedAt > 30 * 60_000;
+        if (!stale) handleResponse(launch);
       }
     } catch {
       // no launch response support on this runtime
