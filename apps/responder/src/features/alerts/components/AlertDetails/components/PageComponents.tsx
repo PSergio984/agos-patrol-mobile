@@ -101,13 +101,16 @@ export const AcknowledgeNotification = () => {
     } catch (err) {
       // 409 = already acknowledged server-side (e.g. acked on the PWA first).
       // That IS the success state — reflect it locally instead of queueing
-      // a retry that would 409 again on every offline-queue flush.
+      // a retry that would 409 again on every offline-queue flush. The body
+      // carries only {detail} today — if a future backend returns the stored
+      // ack, its fields win; never stamp the just-typed message on an ack the
+      // server never stored.
       if (isAxiosError(err) && err.response?.status === 409) {
         const data = err.response.data as
           Partial<AcknowledgeNotificationResponse> | undefined;
         acknowledgeAlert(
           chosenAlert.id,
-          data?.acknowledgeMessage ?? (message || null),
+          data?.acknowledgeMessage ?? null,
           data?.acknowledgedAt ?? new Date().toISOString()
         );
         reduceUnreadCount(1);

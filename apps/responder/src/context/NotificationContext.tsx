@@ -96,10 +96,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       Notifications.addNotificationResponseReceivedListener(handleResponse);
     // Cold start: a tap that launched the app is held as the "last response"
     // until consumed — the listener above only sees taps while running.
-    const launch = Notifications.getLastNotificationResponse();
-    if (launch) {
-      Notifications.clearLastNotificationResponse();
-      handleResponse(launch);
+    // getLastNotificationResponse throws UnavailabilityError where the native
+    // emitter lacks it (web, stale dev-client) — that's survivable, skip it.
+    try {
+      const launch = Notifications.getLastNotificationResponse();
+      if (launch) {
+        Notifications.clearLastNotificationResponse();
+        handleResponse(launch);
+      }
+    } catch {
+      // no launch response support on this runtime
     }
     return () => subscription.remove();
   }, []);
