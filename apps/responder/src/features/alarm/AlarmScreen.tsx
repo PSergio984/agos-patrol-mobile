@@ -53,6 +53,8 @@ export default function AlarmScreen() {
         } catch {
           // Offline / API failure — unresolved fallback shows push content.
         }
+      } catch {
+        // SecureStore read failed — fall through to the unresolvable state.
       } finally {
         if (!cancelled) setDelivery((d) => (d === undefined ? null : d));
       }
