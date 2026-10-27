@@ -14,6 +14,7 @@ import {
   ensureAlarmChannel,
 } from "../lib/alarmChannel";
 import { isExpoGo } from "../lib/notifications";
+import { getStoredValue, setStoredValue } from "../lib/storage";
 import { useCoreHook } from "../context/CoreContext";
 import { useI18n } from "../context/I18nContext";
 import {
@@ -211,12 +212,35 @@ export default function PushPermissionGate() {
 
   const [dndBypassed, setDndBypassed] = useState<boolean | null>(null);
   const [dndDismissed, setDndDismissed] = useState(false);
+  const [dndDismissedStored, setDndDismissedStored] = useState(false);
+
+  // "Not now" is per-responder and permanent — if the grant is unsatisfiable
+  // (user locked the channel's Override-DND, or the OEM broke the settings
+  // screen), a one-time prompt must not become a per-session nag.
+  const dndDismissKey = `dndAlarmPromptDismissed.${responderId}`;
+  useEffect(() => {
+    if (Platform.OS !== "android" || !responderId) return;
+    void getStoredValue(dndDismissKey)
+      .then((v) => setDndDismissedStored(v === "1"))
+      .catch(() => {});
+  }, [responderId, dndDismissKey]);
+
+  const dismissDndPrompt = () => {
+    setDndDismissed(true);
+    void setStoredValue(dndDismissKey, "1").catch(() => {});
+  };
 
   // After subscribing, alarm pushes only ring through Do Not Disturb if the
   // user grants notification-policy access — check once per subscribe/dismiss
   // and again whenever the app returns (they may have just toggled it).
   useEffect(() => {
-    if (Platform.OS !== "android" || !isSubscribed || dndDismissed) return;
+    if (
+      Platform.OS !== "android" ||
+      !isSubscribed ||
+      dndDismissed ||
+      dndDismissedStored
+    )
+      return;
     const check = () =>
       void ensureAlarmChannel()
         .then(alarmChannelBypassesDnd)
@@ -228,7 +252,7 @@ export default function PushPermissionGate() {
       if (state === "active") check();
     });
     return () => sub.remove();
-  }, [isSubscribed, dndDismissed]);
+  }, [isSubscribed, dndDismissed, dndDismissedStored]);
 
   // Remote push cannot work in Expo Go at all — gating would only block
   // development smoke tests. Dev builds and production enforce normally.
@@ -245,7 +269,8 @@ export default function PushPermissionGate() {
     !!responderId &&
     isSubscribed &&
     dndBypassed === false &&
-    !dndDismissed;
+    !dndDismissed &&
+    !dndDismissedStored;
 
   if (showDndPrompt) {
     return (
@@ -253,7 +278,7 @@ export default function PushPermissionGate() {
         visible
         transparent
         animationType="fade"
-        onRequestClose={() => setDndDismissed(true)}
+        onRequestClose={dismissDndPrompt}
       >
         <View className="flex-1 bg-black/50 items-center justify-center p-4">
           <View className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-800 p-6">
@@ -263,7 +288,7 @@ export default function PushPermissionGate() {
                   "android.settings.NOTIFICATION_POLICY_ACCESS_SETTINGS"
                 ).catch(() => {})
               }
-              onDismiss={() => setDndDismissed(true)}
+              onDismiss={dismissDndPrompt}
             />
           </View>
         </View>
