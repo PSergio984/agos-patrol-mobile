@@ -141,6 +141,11 @@ const fil: Record<TranslationKey, string> = {
   "push.logoutButton": "Mag-logout",
   "profile.prefError": "Hindi ma-load ang mga notification preference",
 
+  // Alarm takeover screen
+  "alarm.siteLabel": "Ang iyong lokasyon",
+  "alarm.fallbackTitle": "Alarma sa baha",
+  "alarm.viewDetails": "Tingnan ang detalye",
+
   // Verify page
   "verify.activateAccount": "I-activate ang Iyong Account",
   "verify.activateSubtitle":

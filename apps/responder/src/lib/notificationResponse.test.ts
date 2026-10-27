@@ -36,7 +36,46 @@ describe("dispatchIdFromNotificationData", () => {
 });
 
 describe("routeForNotificationResponse", () => {
-  it("deep-links to alerts with the dispatchId param", () => {
+  it("routes alarm pushes to the takeover screen with pass-through params", () => {
+    expect(
+      routeForNotificationResponse({
+        notification: {
+          request: {
+            content: {
+              title: "FLOOD ALARM",
+              body: "Evacuate the area",
+              data: {
+                type: "alarm",
+                alarm: {
+                  id: 42,
+                  severity: "alarm",
+                  location_id: 1,
+                  issuedAt: "2026-10-15T00:00:00Z",
+                },
+              },
+            },
+          },
+        },
+      })
+    ).toEqual({
+      pathname: "/alarm",
+      params: {
+        dispatchId: "42",
+        title: "FLOOD ALARM",
+        message: "Evacuate the area",
+        issuedAt: "2026-10-15T00:00:00Z",
+      },
+    });
+  });
+
+  it("routes an alarm push without a dispatchId to the bare takeover screen", () => {
+    expect(
+      routeForNotificationResponse(responseWithData({ type: "alarm" }))
+    ).toEqual({ pathname: "/alarm", params: {} });
+  });
+
+  it("deep-links non-alarm pushes to alerts with the dispatchId param", () => {
+    // An alarm-shaped payload without type "alarm" keeps the old behavior.
     expect(
       routeForNotificationResponse(responseWithData({ alarm: { id: 42 } }))
     ).toEqual({

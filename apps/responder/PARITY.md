@@ -45,7 +45,10 @@ Alarm pipeline and offline resilience are later phases (wayfinder map #1).
 - InstallGate (browser-only concept)
 - Alarm/critical-alert takeover UI — later wayfinder phases. The alarm base
   shipped in stages: audible `alarm` channel + siren + DND grant flow (#28),
-  notification-tap deep link + alarm ack (#31). Still out: full-screen
-  takeover (#32), iOS NSE/AlarmKit (#27-gated). Offline: ack outbox +
-  last-page-1 alerts read-cache (#17) shipped; deeper tiers still deferred
+  notification-tap deep link + alarm ack (#31), and the `/alarm` takeover
+  screen + `USE_FULL_SCREEN_INTENT` declaration (#32) — alarm taps now take
+  over the app in-app. Still out: true lockscreen full-screen intent (#34,
+  Expo can't emit FSI — needs a native path), iOS NSE/AlarmKit (#27-gated).
+  Offline: ack outbox + last-page-1 alerts read-cache (#17) shipped; deeper
+  tiers still deferred
 - Citizen-facing features — separate future app/effort
