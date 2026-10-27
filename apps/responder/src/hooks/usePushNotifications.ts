@@ -3,6 +3,7 @@ import { AppState, Platform } from "react-native";
 import type * as NotificationsTypes from "expo-notifications";
 import Constants from "expo-constants";
 import { getNotifications } from "../lib/notifications";
+import { ensureAlarmChannel } from "../lib/alarmChannel";
 import apiClient from "../lib/api/client";
 import { useCoreHook } from "../context/CoreContext";
 
@@ -73,6 +74,9 @@ export function usePushNotifications(): PushNotificationsState {
           name: "default",
           importance: Notifications.AndroidImportance.MAX,
         });
+        // Fails loudly on purpose: Android O+ drops pushes for a missing
+        // channelId, so a failed alarm channel = silent alarms.
+        await ensureAlarmChannel();
       }
 
       const projectId =

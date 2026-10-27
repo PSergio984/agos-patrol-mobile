@@ -10,12 +10,22 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#1ABC9C",
+          "sounds": ["./assets/sounds/siren.wav"]
+        }
+      ],
       "expo-font"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ph.agos.patrol"
+      "bundleIdentifier": "ph.agos.patrol",
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
+      }
     },
     "android": {
       "package": "ph.agos.patrol",
