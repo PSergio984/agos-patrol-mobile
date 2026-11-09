@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -9,7 +10,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import type * as NotificationsTypes from "expo-notifications";
 import { getNotifications } from "../lib/notifications";
 import { routeForNotificationResponse } from "../lib/notificationResponse";
@@ -60,19 +61,55 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// The notification side effects, mounted by the (tabs) layout: the unread
-// fetch keys on CoreContext's responder/site, and the launch-response
-// consumption must run only after the auth bootstrap has routed into (tabs)
-// so its router.navigate lands on top of the tab stack. Requires
-// NotificationProvider (root) and CoreProvider above it.
+// A launch response consumed just before a dead-session redirect clobbered
+// its navigate (stored token the server rejects → /verify) is already
+// cleared natively — stash its route module-wide so a post-verify remount
+// can replay the takeover. Cleared once getResponderDetails proves the
+// session, or at most once per app process.
+let pendingLaunchRoute: Href | null = null;
+
+// Test seam: the stash outlives mounts, so specs reset it between cases.
+export const __resetPendingLaunchRoute = () => {
+  pendingLaunchRoute = null;
+};
+
+// The notification side effects, mounted inside (tabs) above CoreGate: the
+// response listener registers immediately, while the launch-response
+// consume waits on SecureStore hydration + a stored session — NOT the ~10s
+// details fetch — so a cold-start /alarm takeover is bounded by hydration,
+// and a sessionless bootstrap leaves the response queued for the
+// post-login remount. Requires NotificationProvider (root) and
+// CoreProvider above it.
 export function NotificationBridge() {
-  const { responderId, effectiveLocationId } = useCoreHook();
+  const { responderId, responder, effectiveLocationId, hydrated } =
+    useCoreHook();
   const { setUnreadCount } = useNotificationHook();
   // Deduped by request id: some platforms also replay the launch response to
   // the listener, and getLastNotificationResponse would navigate twice for
   // the same tap. Entries expire — a re-tap of the same tray notification
   // minutes later is a new user action, not a replay.
   const handledResponseIds = useRef(new Set<string>());
+
+  // Notification taps deep-link in: alarm pushes (data.type "alarm") go to
+  // the /alarm takeover screen; other dispatch-bearing pushes land on the
+  // alerts tab where alerts.tsx resolves the dispatchId to a delivery and
+  // opens the detail sheet; remaining taps just open the list.
+  const handleResponse = useCallback(
+    (response: NotificationsTypes.NotificationResponse) => {
+      const requestId = response.notification.request.identifier;
+      if (handledResponseIds.current.has(requestId)) return;
+      handledResponseIds.current.add(requestId);
+      // Replay dedup is only needed at mount — release the id after a few
+      // seconds so a deliberate re-tap of the same notification still routes.
+      setTimeout(() => handledResponseIds.current.delete(requestId), 5_000);
+      // navigate (not push): a second alarm reuses the existing /alarm screen
+      // with fresh params instead of stacking a modal over a modal, and an
+      // alerts tap focuses the existing (tabs) entry rather than duplicating
+      // the provider tree.
+      router.navigate(routeForNotificationResponse(response));
+    },
+    []
+  );
 
   // Unread count is scoped server-side to the responder's effective site —
   // refetch when presence changes, and drop results that resolve after a
@@ -90,6 +127,10 @@ export function NotificationBridge() {
 
     if (responderId) {
       fetchUnreadCount();
+    } else {
+      // The provider lives at root and outlives a logout — reset the badge
+      // rather than carrying the previous session's count into the next.
+      setUnreadCount(0);
     }
     return () => {
       cancelled = true;
@@ -116,53 +157,63 @@ export function NotificationBridge() {
     return () => subscription.remove();
   }, [setUnreadCount]);
 
-  // Notification taps deep-link in: alarm pushes (data.type "alarm") go to
-  // the /alarm takeover screen; other dispatch-bearing pushes land on the
-  // alerts tab where alerts.tsx resolves the dispatchId to a delivery and
-  // opens the detail sheet; remaining taps just open the list.
+  // Taps while the app runs route immediately — a live tap already has a
+  // resolved auth context.
   useEffect(() => {
     const Notifications = getNotifications();
     if (!Notifications) return;
-    const handleResponse = (
-      response: NotificationsTypes.NotificationResponse
-    ) => {
-      const requestId = response.notification.request.identifier;
-      if (handledResponseIds.current.has(requestId)) return;
-      handledResponseIds.current.add(requestId);
-      // Replay dedup is only needed at mount — release the id after a few
-      // seconds so a deliberate re-tap of the same notification still routes.
-      setTimeout(() => handledResponseIds.current.delete(requestId), 5_000);
-      // navigate (not push): a second alarm reuses the existing /alarm screen
-      // with fresh params instead of stacking a modal over a modal, and an
-      // alerts tap focuses the existing (tabs) entry rather than duplicating
-      // the provider tree.
-      router.navigate(routeForNotificationResponse(response));
-    };
     const subscription =
       Notifications.addNotificationResponseReceivedListener(handleResponse);
+    return () => subscription.remove();
+  }, [handleResponse]);
+
+  // Launch-response consumption, gated on SecureStore hydration + a stored
+  // session — the ~10s getResponderDetails is deliberately not awaited.
+  useEffect(() => {
+    const Notifications = getNotifications();
+    if (!Notifications || !hydrated) return;
+
+    // Replay a takeover consumed just before a dead-session redirect
+    // clobbered it (see pendingLaunchRoute above).
+    if (responderId && pendingLaunchRoute) {
+      const route = pendingLaunchRoute;
+      pendingLaunchRoute = null;
+      router.navigate(route);
+    }
+
+    // No session in the store — the gate redirects to /verify and this
+    // mount unmounts; leave the response queued for the post-login remount.
+    if (!responderId) return;
+
     // Cold start: a tap that launched the app is held as the "last response"
     // until consumed — the listener above only sees taps while running.
     // getLastNotificationResponse throws UnavailabilityError where the native
     // emitter lacks it (web, stale dev-client) — that's survivable, skip it.
     try {
       const launch = Notifications.getLastNotificationResponse();
-      if (launch) {
-        Notifications.clearLastNotificationResponse();
-        // Bound staleness: this only mounts once routing lands in (tabs) —
-        // a response whose app was killed pre-login would otherwise replay an
-        // old takeover on the next session, possibly hours later.
-        const receivedAt = launch.notification.date;
-        const stale =
-          typeof receivedAt === "number" &&
-          Number.isFinite(receivedAt) &&
-          Date.now() - receivedAt > 30 * 60_000;
-        if (!stale) handleResponse(launch);
+      if (!launch) return;
+      Notifications.clearLastNotificationResponse();
+      // Bound staleness: a response whose app was killed pre-login would
+      // otherwise replay an old takeover on the next session, hours later.
+      const receivedAt = launch.notification.date;
+      const stale =
+        typeof receivedAt === "number" &&
+        Number.isFinite(receivedAt) &&
+        Date.now() - receivedAt > 30 * 60_000;
+      if (!stale) {
+        pendingLaunchRoute = routeForNotificationResponse(launch);
+        handleResponse(launch);
       }
     } catch {
       // no launch response support on this runtime
     }
-    return () => subscription.remove();
-  }, []);
+  }, [hydrated, responderId, handleResponse]);
+
+  // The stash only needs to survive until getResponderDetails confirms the
+  // session — after that the takeover either landed or was already replaced.
+  useEffect(() => {
+    if (responder) pendingLaunchRoute = null;
+  }, [responder]);
 
   return null;
 }
