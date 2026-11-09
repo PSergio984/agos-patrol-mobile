@@ -10,7 +10,7 @@ import { BlockageProvider } from "../../src/context/BlockageContext";
 import { WaterLevelProvider } from "../../src/context/WaterLevelContext";
 import { WeatherProvider } from "../../src/context/WeatherContext";
 import {
-  NotificationProvider,
+  NotificationBridge,
   useNotificationHook,
 } from "../../src/context/NotificationContext";
 import { useI18n } from "../../src/context/I18nContext";
@@ -91,15 +91,18 @@ function ResponderTabs() {
 export default function TabsLayout() {
   return (
     <CoreProvider>
+      {/* Above CoreGate: the response listener + launch-response
+          consumption must not wait on getResponderDetails — on a cold
+          start the /alarm takeover is then bounded by SecureStore
+          hydration, not the ~10s details fetch (#37). */}
+      <NotificationBridge />
       <CoreGate>
         <WebSocketProvider>
           <FusionAnalysisProvider>
             <BlockageProvider>
               <WaterLevelProvider>
                 <WeatherProvider>
-                  <NotificationProvider>
-                    <ResponderTabs />
-                  </NotificationProvider>
+                  <ResponderTabs />
                 </WeatherProvider>
               </WaterLevelProvider>
             </BlockageProvider>

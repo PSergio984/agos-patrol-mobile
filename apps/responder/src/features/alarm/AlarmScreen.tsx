@@ -12,13 +12,16 @@ import { getResponderId, getResponderToken } from "../../lib/storage";
 import { getEligibleSites } from "../../lib/utils/sites";
 import { formatTimestamp } from "../../lib/utils/formatter";
 import { useI18n } from "../../context/I18nContext";
+import { useNotificationHook } from "../../context/NotificationContext";
 
 // Full-screen takeover for alarm pushes (#32) — the surface a future
 // full-screen-intent (#34) will launch directly. Lives on the root Stack,
 // outside the (tabs) provider tree, so CoreContext/AlertsPageContext aren't
-// reachable here: the responder id comes from SecureStore and the push's
-// dispatchId is resolved to this responder's delivery via a page-1 alerts
-// fetch — the same fallback AlertsPageContext.openAlertByDispatchId uses.
+// reachable here (NotificationContext is — it hoists to the root layout so
+// this screen can decrement the unread badge, #36): the responder id comes
+// from SecureStore and the push's dispatchId is resolved to this responder's
+// delivery via a page-1 alerts fetch — the same fallback
+// AlertsPageContext.openAlertByDispatchId uses.
 export default function AlarmScreen() {
   const { dispatchId, title, message, issuedAt, locationId } =
     useLocalSearchParams<{
@@ -29,6 +32,7 @@ export default function AlarmScreen() {
       locationId?: string;
     }>();
   const { t } = useI18n();
+  const { reduceUnreadCount } = useNotificationHook();
 
   // undefined = still resolving, null = no delivery found, Alert = resolved
   const [delivery, setDelivery] = useState<Alert | null | undefined>(undefined);
@@ -101,6 +105,7 @@ export default function AlarmScreen() {
 
   // Same api + 409 + offline-queue pattern as AlertDetails'
   // AcknowledgeNotification — the takeover ack is a single tap, no message.
+  // The badge decrement also mirrors the sheet's reduceUnreadCount(1).
   const handleAcknowledge = async () => {
     if (isSubmitting || !delivery || !responderId) return;
     const payload = {
@@ -112,15 +117,18 @@ export default function AlarmScreen() {
       setIsSubmitting(true);
       await alertsAPI.acknowledgeNotification(payload);
       setAckedDeliveryId(delivery.id);
+      reduceUnreadCount(1);
     } catch (err) {
       // 409 = already acknowledged server-side — that IS the success state,
       // not a retryable failure.
       if (isAxiosError(err) && err.response?.status === 409) {
         setAckedDeliveryId(delivery.id);
+        reduceUnreadCount(1);
         return;
       }
       await enqueueAcknowledgement(payload);
       setAckedDeliveryId(delivery.id);
+      reduceUnreadCount(1);
     } finally {
       setIsSubmitting(false);
     }
