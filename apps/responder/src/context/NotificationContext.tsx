@@ -5,7 +5,9 @@ import {
   useMemo,
   useRef,
   useState,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from "react";
 import { router } from "expo-router";
 import type * as NotificationsTypes from "expo-notifications";
@@ -21,21 +23,56 @@ import {
 interface NotificationContextValue {
   unreadCount: number;
   reduceUnreadCount: (amount: number) => void;
+  // Written by NotificationBridge's site-scoped fetch — the fetch needs
+  // CoreContext, which only exists under (tabs), while the state itself must
+  // live at the root so /alarm can reach it.
+  setUnreadCount: Dispatch<SetStateAction<number>>;
 }
 
 const NotificationContext = createContext<NotificationContextValue | undefined>(
   undefined
 );
 
+// State-only provider mounted by the ROOT layout (app/_layout.tsx): the
+// /alarm takeover sits on the root Stack outside (tabs), so the badge state
+// must live above the navigator for its ack to reach it (#36). Side effects
+// stay in NotificationBridge below.
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const reduceUnreadCount = (amount: number = 1) => {
+    setUnreadCount((prev) => Math.max(prev - amount, 0));
+  };
+
+  const contextValue = useMemo(
+    () => ({
+      unreadCount,
+      reduceUnreadCount,
+      setUnreadCount,
+    }),
+    [unreadCount]
+  );
+
+  return (
+    <NotificationContext.Provider value={contextValue}>
+      {children}
+    </NotificationContext.Provider>
+  );
+}
+
+// The notification side effects, mounted by the (tabs) layout: the unread
+// fetch keys on CoreContext's responder/site, and the launch-response
+// consumption must run only after the auth bootstrap has routed into (tabs)
+// so its router.navigate lands on top of the tab stack. Requires
+// NotificationProvider (root) and CoreProvider above it.
+export function NotificationBridge() {
+  const { responderId, effectiveLocationId } = useCoreHook();
+  const { setUnreadCount } = useNotificationHook();
   // Deduped by request id: some platforms also replay the launch response to
   // the listener, and getLastNotificationResponse would navigate twice for
   // the same tap. Entries expire — a re-tap of the same tray notification
   // minutes later is a new user action, not a replay.
   const handledResponseIds = useRef(new Set<string>());
-
-  const { responderId, effectiveLocationId } = useCoreHook();
 
   // Unread count is scoped server-side to the responder's effective site —
   // refetch when presence changes, and drop results that resolve after a
@@ -57,7 +94,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [responderId, effectiveLocationId]);
+  }, [responderId, effectiveLocationId, setUnreadCount]);
 
   // Listen for push notifications received while the app is foregrounded
   // and play in-app feedback (native equivalent of the service-worker
@@ -77,7 +114,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     );
     return () => subscription.remove();
-  }, []);
+  }, [setUnreadCount]);
 
   // Notification taps deep-link in: alarm pushes (data.type "alarm") go to
   // the /alarm takeover screen; other dispatch-bearing pushes land on the
@@ -111,9 +148,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const launch = Notifications.getLastNotificationResponse();
       if (launch) {
         Notifications.clearLastNotificationResponse();
-        // Bound staleness: this provider only mounts post-auth — a response
-        // whose app was killed pre-login would otherwise replay an old
-        // takeover on the next session, possibly hours later.
+        // Bound staleness: this only mounts once routing lands in (tabs) —
+        // a response whose app was killed pre-login would otherwise replay an
+        // old takeover on the next session, possibly hours later.
         const receivedAt = launch.notification.date;
         const stale =
           typeof receivedAt === "number" &&
@@ -127,23 +164,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, []);
 
-  const reduceUnreadCount = (amount: number = 1) => {
-    setUnreadCount((prev) => Math.max(prev - amount, 0));
-  };
-
-  const contextValue = useMemo(
-    () => ({
-      unreadCount,
-      reduceUnreadCount,
-    }),
-    [unreadCount]
-  );
-
-  return (
-    <NotificationContext.Provider value={contextValue}>
-      {children}
-    </NotificationContext.Provider>
-  );
+  return null;
 }
 
 export const useNotificationHook = () => {

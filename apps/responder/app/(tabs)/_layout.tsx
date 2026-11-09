@@ -10,7 +10,7 @@ import { BlockageProvider } from "../../src/context/BlockageContext";
 import { WaterLevelProvider } from "../../src/context/WaterLevelContext";
 import { WeatherProvider } from "../../src/context/WeatherContext";
 import {
-  NotificationProvider,
+  NotificationBridge,
   useNotificationHook,
 } from "../../src/context/NotificationContext";
 import { useI18n } from "../../src/context/I18nContext";
@@ -97,9 +97,8 @@ export default function TabsLayout() {
             <BlockageProvider>
               <WaterLevelProvider>
                 <WeatherProvider>
-                  <NotificationProvider>
-                    <ResponderTabs />
-                  </NotificationProvider>
+                  <NotificationBridge />
+                  <ResponderTabs />
                 </WeatherProvider>
               </WaterLevelProvider>
             </BlockageProvider>

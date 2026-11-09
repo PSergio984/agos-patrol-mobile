@@ -92,6 +92,11 @@ jest.mock("../../context/I18nContext", () => ({
   useI18n: () => ({ t: (key: string) => key }),
 }));
 
+const mockReduceUnreadCount = jest.fn();
+jest.mock("../../context/NotificationContext", () => ({
+  useNotificationHook: () => ({ reduceUnreadCount: mockReduceUnreadCount }),
+}));
+
 const RESPONDER: Responder = {
   id: "r1",
   firstName: "Ana",
@@ -162,6 +167,8 @@ describe("AlarmScreen", () => {
       deliveryId: "delivery-9",
     });
     expect(mockEnqueue).not.toHaveBeenCalled();
+    // The takeover ack must decrement the same badge the sheet ack does (#36).
+    expect(mockReduceUnreadCount).toHaveBeenCalledWith(1);
   });
 
   it("shows push content and hides ack when the delivery is unresolvable", async () => {
@@ -196,6 +203,7 @@ describe("AlarmScreen", () => {
     await waitFor(() => screen.getByText("alerts.acknowledged"));
 
     expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(mockReduceUnreadCount).toHaveBeenCalledWith(1);
   });
 
   it("queues the acknowledgement for retry on connection failure", async () => {
@@ -211,6 +219,7 @@ describe("AlarmScreen", () => {
       responderId: "r1",
       deliveryId: "delivery-9",
     });
+    expect(mockReduceUnreadCount).toHaveBeenCalledWith(1);
   });
 
   it("shows the acked state directly when the delivery is already acked", async () => {
