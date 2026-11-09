@@ -91,13 +91,17 @@ function ResponderTabs() {
 export default function TabsLayout() {
   return (
     <CoreProvider>
+      {/* Above CoreGate: the response listener + launch-response
+          consumption must not wait on getResponderDetails — on a cold
+          start the /alarm takeover is then bounded by SecureStore
+          hydration, not the ~10s details fetch (#37). */}
+      <NotificationBridge />
       <CoreGate>
         <WebSocketProvider>
           <FusionAnalysisProvider>
             <BlockageProvider>
               <WaterLevelProvider>
                 <WeatherProvider>
-                  <NotificationBridge />
                   <ResponderTabs />
                 </WeatherProvider>
               </WaterLevelProvider>
