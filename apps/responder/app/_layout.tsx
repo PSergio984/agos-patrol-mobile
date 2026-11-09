@@ -17,6 +17,7 @@ import {
 import ErrorBoundary from "../src/components/ErrorBoundary";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
 import { I18nProvider } from "../src/context/I18nContext";
+import { NotificationProvider } from "../src/context/NotificationContext";
 import { setUnauthorizedHandler } from "../src/lib/api/client";
 import { clearResponderSession } from "../src/lib/storage";
 
@@ -107,7 +108,12 @@ export default function RootLayout() {
       <ThemeProvider>
         <I18nProvider>
           <ErrorBoundary>
-            <RootStack />
+            {/* Root-level so /alarm — a root Stack screen outside (tabs) —
+                can reach useNotificationHook. Effects live in
+                NotificationBridge under (tabs). */}
+            <NotificationProvider>
+              <RootStack />
+            </NotificationProvider>
           </ErrorBoundary>
         </I18nProvider>
       </ThemeProvider>
